@@ -1,5 +1,55 @@
-# multiplay
-Framework for doing multiplayer games
+                **multiplay**
+                **Framework for multiplayer games**
+                Jacques Gasselin,
+                Copyright 2018
+
+
+Design
+======
+
+Each platform defines its own API and ecosystem for managing Players and Games. Most of them are incompatible and have severe platform bugs. This framework move the responsibility of fixing the bugs to the community and to allow cross platform gaming.
+
+Connect the Game
+=================
+
+Call the API with the game server URL and the game UUID. The UUID is purely a token that the server and client has agreed upon. GameConnectionToken is returned that is used for all communication between the game and the server from this point onward.
+
+***********************************************
+* .--------.                        .--------.
+* |        +----connect:gameUUID--->|        |
+* |  Game  |                        | Server |
+* |        |<----connectionUUID-----+        |
+* '--------'                        '--------'
+*
+***********************************************
+
+   *Request*:
+   
+   GET *ServerURI*/connect?gameUUID=*Game UUID*
+   
+   *Response*:
+   
+   connectionToken : UUID
+
+
+This handshake allows the server to manage load and by assigning tokens
+it can ensure that only active connections are serviced in case of
+rogue clients.
+
+
+Connecting the player
+===================
+
+Use the GameConnectionToken to create a player with the localDeviceUUID.
+For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor UUIDString]
+
+Saving Data
+===========
+
+
+Starting a Session
+==================
+
 
 <!-- Markdeep: -->
 <style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style>
