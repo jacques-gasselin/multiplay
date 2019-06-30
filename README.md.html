@@ -23,14 +23,23 @@ Call the API with the game server URL and the game UUID. The UUID is purely a to
 *
 ***********************************************
 
+Client Side:
+
    *Request*:
    
-   GET *ServerURI*/connect?gameUUID=*Game UUID*
+   GET *ServerURI*/connect?game=*Game UUID*
    
    *Response*:
    
    connectionToken : UUID
 
+Server Side:
+
+*Lookup game UUID in database*
+*If not found return an empty UUID*
+*If found generate a connection UUID, that does not clash with other current or stale connnections, with a timeout*
+*Clear out all stale connections for the game UUID*
+*Return the connection UUID*
 
 This handshake allows the server to manage load and by assigning tokens
 it can ensure that only active connections are serviced in case of
@@ -40,11 +49,30 @@ rogue clients.
 Connecting the player
 ===================
 
-Use the GameConnectionToken to create a player with the localDeviceUUID.
+Use the GameConnectionToken to create a player, or fetch the last used player, with the localDeviceUUID.
 For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor UUIDString]
+
+Client Side:
+
+   *Request*:
+   
+   GET *ServerURI*/login?connection=*connectionToken*&localDevice=*localDeviceUUID*
+   
+   *Response*:
+   
+   playerToken : UUID
+
+Server Side:
+
+
 
 Saving Data
 ===========
+
+
+Loading Data
+============
+
 
 
 Starting a Session
