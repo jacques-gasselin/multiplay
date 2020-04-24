@@ -14,12 +14,15 @@ Types
 
 The Client - Server connection is based on a few base types
 
- Name      | Range    | Description
------------|----------|-----------------
- Boolean   |  [0, 1]  | 0=False, !0=True
- UUID      |  Base16  | 128bit UUID, represented as 32 hexadecimals in URLs, or 8 bytes when connected via a socket
- IPAddress |  IPv6    | 128bit unsigned number, as 32 hexadecimals grouped in to 4 digits separated by colons, or 8 bytes when connected via a socket 
- Port      | [0,2^32] | A port number to combine with an IPAddress for a socket connection
+ Name       | Range    | Description
+------------|----------|-----------------
+ Boolean    |  [0, 1]  | 0=False, !0=True
+ String     |  char[]  | A variable length array of unicode characters.
+ Data       |  byte[]  | A variable length array of bytes.
+ UUID       |  Base16  | 128bit UUID, represented as 32 hexadecimals in URLs, or 8 bytes when connected via a socket
+ List<UUID> |   N/A    | A comma separated list of UUIDs.
+ IPAddress  |  IPv6    | 128bit unsigned number, as 32 hexadecimals grouped in to 4 digits separated by colons, or 8 bytes when connected via a socket
+ Port       | [0,2^32] | A port number to combine with an IPAddress for a socket connection
   [Client-Server types]
 
 Connect the Game
@@ -59,9 +62,10 @@ This handshake allows the server to manage load and by assigning tokens
 it can ensure that only active connections are serviced in case of
 rogue clients.
 
+A server may choose to allow connections for games that are not already registered. This is great for development of games or for learning focused platforms that want to offer multiplayer services.
 
-Connecting the player
-===================
+Connect the Local Player
+========================
 
 Use the GameConnectionToken to create a player, or fetch the last used player, with the localDeviceUUID.
 For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor UUIDString]
@@ -70,7 +74,7 @@ For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor 
 *   .---------.                                    .--------.
 *   |         +----login:connection,localDevice--->|        |
 *   |  Game   |                                    | Server |
-*   |         |<--------playerTokenUUID------------+        |
+*   |         |<-----localplayerTokenUUID----------+        |
 *   '---------'                                    '--------'
 *        ^
 *        |
@@ -95,12 +99,12 @@ Client Side:
 
    *Response*:
    
-   playerToken : UUID
+   localPlayerToken : UUID
 
 Server Side:
 
 ~~~ sql
-   SELECT P.playerToken, P.connectionTime, P.deviceUUID
+   SELECT P.localPlayerToken, P.connectionTime, P.deviceUUID
    FROM playerTokenConnectionTimeAndDeviceUUIDByConnectionToken AS P
    WHERE P.connectionToken = $connectionToken
 ~~~
@@ -120,32 +124,34 @@ Server Side:
 
 This flow relies on the game being able to provide a stable UUID for the device. If a user has chose to forget settings on the device the UUID should have been regenerated and a new anonymous login would occurr.
 
-Saving Data
-===========
-A game will often want to save data for the player in the cloud. With a valid connectionToken and playerToken we should be abe to save a binary blob of data.
+Write Data for the Local Player
+================================
+
+A game will often want to write data for the local player in the cloud. With a valid connectionToken and localPlayerToken we should be abe to save a binary blob of data.
 
 Client Side:
 
    *URL Request*:
 
 ~~~ http
-   /savePlayerData?connetion=$connectionToken&player=$playerToken
+   /writePlayerData?connetion=$connectionToken&player=$localPlayerToken
 ~~~
 
    *Reponse*
    
    status : Boolean 
 
-Loading Data
-============
-Retrieve a blob of player data for the game.
+Read Data for the Local Player
+=================================
+
+Retrieve a blob of local player data for the game.
 
 Client Side:
 
    *URL Request*:
 
 ~~~ http
-   /loadPlayerData?connection=$connectionToken&player=$playerToken
+   /readPlayerData?connection=$connectionToken&player=$localPlayerToken
 ~~~
 
    *Response*
@@ -157,13 +163,15 @@ The returned data will be empty if there was no data to retrieve. The potential 
 
 Starting a Session
 ==================
+
 A session is a server state instance than can be shared among players. This is used for saving data in a shared game. As this is possibly shared among players the easiest way to manage atomicity is to treat it like a key value store. There exists a binary blob for each key. There is no merging of data, and last in wins if two connections write to the same key.
 
 Client Side:
 
    *URL Request*
+   
 ~~~ http
-   /createSession?connection=$connectionToken&player=$playerToken
+   /createSession?connection=$connectionToken&player=$localPlayerToken
 ~~~
    
    *Response*
@@ -172,11 +180,63 @@ Client Side:
 
 Server Side:
 
-   1. Create a new session for the player.
+   1. Create a new session for the player.‚
 
+
+Get List of Sessions for the Local Player
+=========================================
+
+Get the sessions that the player is in currently. This may be session the player created or another player created and then added the local the player to.
+
+Client Side:
+
+   *URL Request*
+   
+~~~ http
+   /listSessions?connection=$connectionToken&player=$localPlayerToken
+~~~
+
+   *Response*
+
+   sessionTokens : List<UUID>
+
+Write State to a Session
+========================
+
+Write data to a key for the session.
+
+Client Side:
+
+    *URL Request*
+    
+~~~ http
+   /writeSessionDataForKey?connection=$connectionToken&session=$sessionToken&key=$key&data=$data
+~~~
+
+   *Response*
+
+   status : Boolean
+
+Read State from a Session
+=========================
+
+Read data from a key for the session.
+
+Client Side:
+
+   *URL Request*
+
+~~~ http
+   /readSessionDataForKey?connection=$connectionToken&session=$sessionToken&key=$key
+~~~
+
+   *Response*
+
+   data : Data
 
 Add a player to a session
 =========================
+
 A session is created with only one player, the only way to add players is to invite them.
 
 Client Side:
@@ -184,25 +244,32 @@ Client Side:
    *Request*
 
 ~~~ http
-   /addPlayerToSession?connection=$connectionToken&session=$sessionToken&player=$playerToken
+   /addPlayerToSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
 ~~~
    *Response*
    
    status : Boolean
 
 !!! note
-    *playerToken* in this case is the token of the other player to add to the session.
+   *remotePlayerToken* is the token of a player other than the local player to add to the session.
 
 Remove a player from a session
 ==============================
 
+Client Side:
 
-Write State to a Session
-========================
+   *Request*
 
+~~~ http
+   /removePlayerFromSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
+~~~
 
-Read State from a Session
-=========================
+   *Response*
+
+   status : Boolean
+
+!!! note
+   *remotePlayerToken* is the token of a player other than the local player to remove from the session.
 
 
 Create Peer-to-Peer Connection with Player in Session
@@ -211,8 +278,9 @@ Create Peer-to-Peer Connection with Player in Session
 Client Side:
 
    *URL Request*
+   
 ~~~ http
-   /connectToPlayerInSession?connection=$connectionToken&session=$sessionToken&player=$playerToken
+   /connectToPlayerInSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
 ~~~
    
    *Response*
@@ -221,7 +289,10 @@ Client Side:
    port : Port
    INETADDR
 
-This connection may be truly peer-to-peer but if reachability is an issue it may be tunneled through the server. An implementation detail the client does not need to worry about.
+!!! note
+   *remotePlayerToken* is the token of a player other than the local player to directy connect to.
+
+This connection may be truly peer-to-peer but if reachability is an issue it may be tunneled through a STUN or TURN server. An implementation detail the client does not need to worry about.
 
 
 <!-- Markdeep: -->
