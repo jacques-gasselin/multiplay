@@ -9,6 +9,17 @@ Design
 
 Each platform defines its own API and ecosystem for managing Players and Games. Most of them are incompatible and have severe platform bugs. This framework move the responsibility of fixing the bugs to the community and to allow cross platform gaming.
 
+Types
+=====
+
+The Client - Server connection is based on a few base types
+
+ Name      | Range  | Description
+-----------|--------|-----------------
+ Boolean   | [0, 1] | 0=False, !0=True
+ UUID      | Base16 | 128bit UUID, represented as 32 hexadecimals in URLs, or 8 bytes when connected directly
+  [Client-Server types]
+
 Connect the Game
 =================
 
@@ -26,20 +37,20 @@ Call the API with the game server URL and the game UUID. The UUID is purely a to
 Client Side:
 
    *Request*:
-   
-   GET *ServerURI*/connect?game=*Game UUID*
-   
+~~~ http
+   /connect?game=$gameUUID
+~~~
    *Response*:
    
    connectionToken : UUID
 
 Server Side:
 
-*Lookup game UUID in database*
-*If not found return an empty UUID*
-*If found generate a connection UUID, that does not clash with other current or stale connnections, with a timeout*
-*Clear out all stale connections for the game UUID*
-*Return the connection UUID*
+ 1. Lookup game UUID in database
+ 1. If not found return an empty UUID
+ 1. If found generate a connection UUID, that does not clash with other current or stale connnections, with a timeout
+ 1. Clear out all stale connections for the game UUID
+ 1. Return the connection UUID
 
 This handshake allows the server to manage load and by assigning tokens
 it can ensure that only active connections are serviced in case of
@@ -52,22 +63,43 @@ Connecting the player
 Use the GameConnectionToken to create a player, or fetch the last used player, with the localDeviceUUID.
 For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor UUIDString]
 
+****************************************************************
+*   .---------.                                    .--------.
+*   |         +----login:connection,localDevice--->|        |
+*   |  Game   |                                    | Server |
+*   |         |<--------playerTokenUUID------------+        |
+*   '---------'                                    '--------'
+*        ^
+*        |
+*  localDeviceUUID
+*        |
+*        |
+*    .---+----.
+*   |          |                                    
+*   |  Device  |                                    
+*   |          |                                    
+*    '--------'                                    
+*
+****************************************************************
+
 Client Side:
 
    *Request*:
-   
-   GET *ServerURI*/login?connection=*connectionToken*&localDevice=*localDeviceUUID*
-   
+~~~ http
+   /login?connection=$connectionToken&localDevice=$localDeviceUUID
+~~~
+
    *Response*:
    
    playerToken : UUID
 
 Server Side:
 
+~~~ sql
    SELECT P.playerToken, P.connectionTime, P.deviceUUID
    FROM playerTokenConnectionTimeAndDeviceUUIDByConnectionToken AS P
    WHERE P.connectionToken = $connectionToken
-
+~~~
    1. Resolve if there are stale connections based on the connection time being stale.
       Remove the stale connections from the table so that no more requests are serviced on
       a stale connection
@@ -77,9 +109,10 @@ Server Side:
       This involves selecting from the playerByDevice Table and returning a token for the last used
       player for that device.
       Or if there are no players associated with that device returning a new one.
-      Note that there may be multiple tokens for a single player. Such that play can begin under one
-      anonymous player and then be merged by some authenticated login to another existing player.
-      This is a common game affordace to avoid locking a player into a login flow when they first start a game.
+!!! note
+    There may be multiple tokens for a single player. Such that play can begin under one
+    anonymous player and then be merged by some authenticated login to another existing player.
+    This is a common game affordace to avoid locking a player into a login flow when they first start a game.
 
 This flow relies on the game being able to provide a stable UUID for the device. If a user has chose to forget settings on the device the UUID should have been regenerated and a new anonymous login would occurr.
 
@@ -90,12 +123,14 @@ A game will often want to save data for the player in the cloud. With a valid co
 Client Side:
 
    *Request*:
-   
-   POST *ServerURI*/savePlayerData?connetion=*connectionToken*&player=*playerToken*
-   
+
+~~~ http
+   /savePlayerData?connetion=$connectionToken&player=$playerToken
+~~~
+
    *Reponse*
    
-   status : Bool
+   status : Boolean 
 
 Loading Data
 ============
@@ -104,9 +139,11 @@ Retrieve a blob of player data for the game.
 Client Side:
 
    *Request*:
-   
-   GET *ServerURI*/loadPlayerData?connection=*connectionToken*&player=*playerToken*
-   
+
+~~~ http
+   /loadPlayerData?connection=$connectionToken&player=$playerToken
+~~~
+
    *Response*
    
    data : Data
@@ -121,8 +158,9 @@ A session is a server state instance than can be shared among players. This is u
 Client Side:
 
    *Request*
-   
-   GET *ServerURI*/createSession?connection=*connectionToken*&player=*playerToken*
+~~~ http
+   /createSession?connection=$connectionToken&player=$playerToken
+~~~
    
    *Response*
    
@@ -140,13 +178,16 @@ A session is created with only one player, the only way to add players is to inv
 Client Side:
 
    *Request*
-   
-   GET *ServerURI*/addPlayerToSession?connection=*connectionToken*&session=*sessionToken*&player=*playerToken*
-   Note: *playerToken* in this case is the token of the other player to add to the session.
-   
+
+~~~ http
+   /addPlayerToSession?connection=$connectionToken&session=$sessionToken&player=$playerToken
+~~~
    *Response*
    
-   status : BOOL
+   status : Boolean
+
+!!! note
+    *playerToken* in this case is the token of the other player to add to the session.
 
 Remove a player from a session
 ==============================
@@ -166,8 +207,9 @@ Create Peer-to-Peer Connection with Player in Session
 Client Side:
 
    *Request*
-   
-   GET *ServerURI*/connectToPlayerInSession?connection=*connectionToken*&session=*sessionToken*&player=*playerToken*
+~~~ http
+   /connectToPlayerInSession?connection=$connectionToken&session=$sessionToken&player=$playerToken
+~~~
    
    *Response*
    
