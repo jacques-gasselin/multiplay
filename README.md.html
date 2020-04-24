@@ -64,19 +64,116 @@ Client Side:
 
 Server Side:
 
+   SELECT P.playerToken, P.connectionTime, P.deviceUUID
+   FROM playerTokenConnectionTimeAndDeviceUUIDByConnectionToken AS P
+   WHERE P.connectionToken = $connectionToken
 
+   1. Resolve if there are stale connections based on the connection time being stale.
+      Remove the stale connections from the table so that no more requests are serviced on
+      a stale connection
+   1. If there are multiple connections invalidate all that are not for the given device id
+   1. If there is a valid connection for the given device return that and refresh the connection time.
+   1. If there are no connections insert a new unique one into the table and return that playerToken.
+      This involves selecting from the playerByDevice Table and returning a token for the last used
+      player for that device.
+      Or if there are no players associated with that device returning a new one.
+      Note that there may be multiple tokens for a single player. Such that play can begin under one
+      anonymous player and then be merged by some authenticated login to another existing player.
+      This is a common game affordace to avoid locking a player into a login flow when they first start a game.
+
+This flow relies on the game being able to provide a stable UUID for the device. If a user has chose to forget settings on the device the UUID should have been regenerated and a new anonymous login would occurr.
 
 Saving Data
 ===========
+A game will often want to save data for the player in the cloud. With a valid connectionToken and playerToken we should be abe to save a binary blob of data.
 
+Client Side:
+
+   *Request*:
+   
+   POST *ServerURI*/savePlayerData?connetion=*connectionToken*&player=*playerToken*
+   
+   *Reponse*
+   
+   status : Bool
 
 Loading Data
 ============
+Retrieve a blob of player data for the game.
 
+Client Side:
+
+   *Request*:
+   
+   GET *ServerURI*/loadPlayerData?connection=*connectionToken*&player=*playerToken*
+   
+   *Response*
+   
+   data : Data
+
+The returned data will be empty if there was no data to retrieve. The potential for an error in the connection may be needed too to have a status.
 
 
 Starting a Session
 ==================
+A session is a server state instance than can be shared among players. This is used for saving data in a shared game. As this is possibly shared among players the easiest way to manage atomicity is to treat it like a key value store. There exists a binary blob for each key. There is no merging of data, and last in wins if two connections write to the same key.
+
+Client Side:
+
+   *Request*
+   
+   GET *ServerURI*/createSession?connection=*connectionToken*&player=*playerToken*
+   
+   *Response*
+   
+   sessionToken : UUID
+
+Server Side:
+
+   1. Create a new session for the player.
+
+
+Add a player to a session
+=========================
+A session is created with only one player, the only way to add players is to invite them.
+
+Client Side:
+
+   *Request*
+   
+   GET *ServerURI*/addPlayerToSession?connection=*connectionToken*&session=*sessionToken*&player=*playerToken*
+   Note: *playerToken* in this case is the token of the other player to add to the session.
+   
+   *Response*
+   
+   status : BOOL
+
+Remove a player from a session
+==============================
+
+
+Write State to a Session
+========================
+
+
+Read State from a Session
+=========================
+
+
+Create Peer-to-Peer Connection with Player in Session
+=====================================================
+
+Client Side:
+
+   *Request*
+   
+   GET *ServerURI*/connectToPlayerInSession?connection=*connectionToken*&session=*sessionToken*&player=*playerToken*
+   
+   *Response*
+   
+   address,port : INETADDR
+
+This connection may be truly peer-to-peer but if reachability is an issue it may be tunneled through the server. An implementation detail the client does not need to worry about.
 
 
 <!-- Markdeep: -->
