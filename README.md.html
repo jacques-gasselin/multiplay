@@ -44,11 +44,28 @@ Client Side:
    *URL Request*
 
 ~~~ http
-   /connect?game=$gameUUID
+/connect?game=$gameUUID
 ~~~
+
    *Response*:
+
+   json
+~~~ json
+{ "connectionToken" : "UUID" }
+~~~
+
+   html
+~~~ html
+connectionToken=UUID
+~~~
+
+!!! note
+   All URL requests support an option argument *response*, which is either *html* or *json*.
+   html is assumed if the format is omitted.
    
-   connectionToken : UUID
+   /connect?game=$gameUUID&response=(json|html)
+
+
 
 Server Side:
 
@@ -94,12 +111,20 @@ Client Side:
    *URL Request*
 
 ~~~ http
-   /login?connection=$connectionToken&localDevice=$localDeviceUUID
+/login?connection=$connectionToken&localDevice=$localDeviceUUID
 ~~~
 
    *Response*:
    
-   localPlayerToken : UUID
+   json
+~~~ json
+{ "localPlayerToken" : "UUID" }
+~~~
+   
+   html
+~~~ html
+localPlayerToken=UUID
+~~~
 
 Server Side:
 
