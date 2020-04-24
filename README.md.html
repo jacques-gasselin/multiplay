@@ -14,10 +14,12 @@ Types
 
 The Client - Server connection is based on a few base types
 
- Name      | Range  | Description
------------|--------|-----------------
- Boolean   | [0, 1] | 0=False, !0=True
- UUID      | Base16 | 128bit UUID, represented as 32 hexadecimals in URLs, or 8 bytes when connected directly
+ Name      | Range    | Description
+-----------|----------|-----------------
+ Boolean   |  [0, 1]  | 0=False, !0=True
+ UUID      |  Base16  | 128bit UUID, represented as 32 hexadecimals in URLs, or 8 bytes when connected via a socket
+ IPAddress |  IPv6    | 128bit unsigned number, as 32 hexadecimals grouped in to 4 digits separated by colons, or 8 bytes when connected via a socket 
+ Port      | [0,2^32] | A port number to combine with an IPAddress for a socket connection
   [Client-Server types]
 
 Connect the Game
@@ -36,7 +38,8 @@ Call the API with the game server URL and the game UUID. The UUID is purely a to
 
 Client Side:
 
-   *Request*:
+   *URL Request*
+
 ~~~ http
    /connect?game=$gameUUID
 ~~~
@@ -84,7 +87,8 @@ For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor 
 
 Client Side:
 
-   *Request*:
+   *URL Request*
+
 ~~~ http
    /login?connection=$connectionToken&localDevice=$localDeviceUUID
 ~~~
@@ -122,7 +126,7 @@ A game will often want to save data for the player in the cloud. With a valid co
 
 Client Side:
 
-   *Request*:
+   *URL Request*:
 
 ~~~ http
    /savePlayerData?connetion=$connectionToken&player=$playerToken
@@ -138,7 +142,7 @@ Retrieve a blob of player data for the game.
 
 Client Side:
 
-   *Request*:
+   *URL Request*:
 
 ~~~ http
    /loadPlayerData?connection=$connectionToken&player=$playerToken
@@ -157,7 +161,7 @@ A session is a server state instance than can be shared among players. This is u
 
 Client Side:
 
-   *Request*
+   *URL Request*
 ~~~ http
    /createSession?connection=$connectionToken&player=$playerToken
 ~~~
@@ -206,14 +210,16 @@ Create Peer-to-Peer Connection with Player in Session
 
 Client Side:
 
-   *Request*
+   *URL Request*
 ~~~ http
    /connectToPlayerInSession?connection=$connectionToken&session=$sessionToken&player=$playerToken
 ~~~
    
    *Response*
    
-   address,port : INETADDR
+   address : IPAddress
+   port : Port
+   INETADDR
 
 This connection may be truly peer-to-peer but if reachability is an issue it may be tunneled through the server. An implementation detail the client does not need to worry about.
 
