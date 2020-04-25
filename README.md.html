@@ -49,9 +49,11 @@ Client Side:
 
    *Response*:
 
+   connectionToken : UUID
+   
    json
 ~~~ json
-{ "connectionToken" : "UUID" }
+{ "connectionToken" : UUID }
 ~~~
 
    html
@@ -116,9 +118,11 @@ Client Side:
 
    *Response*:
    
+   localPlayerToken : UUID
+   
    json
 ~~~ json
-{ "localPlayerToken" : "UUID" }
+{ "localPlayerToken" : UUID }
 ~~~
    
    html
@@ -159,12 +163,22 @@ Client Side:
    *URL Request*:
 
 ~~~ http
-   /writePlayerData?connetion=$connectionToken&player=$localPlayerToken
+/writePlayerData?connection=$connectionToken&player=$localPlayerToken&data=$data
 ~~~
 
    *Reponse*
+  
+   status : Boolean
    
-   status : Boolean 
+   json
+~~~ json
+{ "status" : (0|1) }
+~~~
+  
+  html
+~~~ html
+status=(0|1)
+~~~
 
 Read Data for the Local Player
 =================================
@@ -176,12 +190,22 @@ Client Side:
    *URL Request*:
 
 ~~~ http
-   /readPlayerData?connection=$connectionToken&player=$localPlayerToken
+/readPlayerData?connection=$connectionToken&player=$localPlayerToken
 ~~~
 
    *Response*
    
    data : Data
+
+   json
+~~~ json
+{ "data" : Data }
+~~~
+
+   html
+~~~ html
+data=Data
+~~~
 
 The returned data will be empty if there was no data to retrieve. The potential for an error in the connection may be needed too to have a status.
 
@@ -205,7 +229,7 @@ Client Side:
 
 Server Side:
 
-   1. Create a new session for the player.‚
+   1. Create a new session for the player.
 
 
 Get List of Sessions for the Local Player
