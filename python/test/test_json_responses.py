@@ -25,6 +25,7 @@ import unittest
 
 gameUUID = uuid.UUID("12345678-1234-5678-1234-567812345678")
 localDeviceUUID = uuid.uuid1(clock_seq=0)
+#host = "multiplay.ludo.digital"
 host = "localhost"
 port = 12345
 
