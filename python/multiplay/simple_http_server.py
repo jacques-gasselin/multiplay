@@ -21,79 +21,54 @@ import http.server
 import uuid
 import urllib.parse
 import json
+import backend
+import sys
 
 class ServerInstance(object):
-    def __init__(self):
-        self.__gameByConnection = {}
-        self.__localPlayerByConnection = {}
-        self.__deviceByConnection = {}
-        self.__playerByLocalPlayerAndConnection = {}
-        self.__playerByDevice = {}
-        self.__dataPerPlayerAndGame = {}
+    def __init__(self, db):
+        self.__db = backend.PickleBackend(dbPath)
+        self.__db.open()
+
+    def close(self):
+        self.__db.close()
 
     def connect(self, handler, game):
         print("CONNECT game %s" % game)
-        gameUUID = uuid.UUID(game)
-        connectionUUID = uuid.uuid5(gameUUID, handler.client_address[0])
-        self.__gameByConnection[connectionUUID] = gameUUID
+        connectionUUID = self.__db.connect(handler.client_address[0], game)
         return { "connectionToken" : str(connectionUUID) }
 
     def login(self, handler, connection, localDevice):
         print("LOGIN connection %s on device %s " % (connection, localDevice))
-        #print("__localPlayerByConnection = ", self.__localPlayerByConnection)
-        localDeviceUUID = uuid.UUID(localDevice)
-        connectionUUID = uuid.UUID(connection)
-        self.__deviceByConnection[connectionUUID] = localDeviceUUID
-        if connectionUUID in self.__localPlayerByConnection:
-            print("  found local player for connection")
-            localPlayerUUID = self.__localPlayerByConnection[connectionUUID]
-            return { "localPlayerToken" : str(localPlayerUUID) }
-        if localDeviceUUID in self.__playerByDevice:
-            print("  player exists for device")
-            playerUUID = self.__playerByDevice[localDeviceUUID]
-        else:
-            print("  create new player for device")
-            playerUUID = uuid.uuid4()
-            self.__playerByDevice[localDeviceUUID] = playerUUID
-        localPlayerUUID = uuid.uuid5(localDeviceUUID, str(playerUUID))
-        self.__localPlayerByConnection[connectionUUID] = localPlayerUUID
-        self.__playerByLocalPlayerAndConnection[(localPlayerUUID, connectionUUID)] = playerUUID
+        localPlayerUUID = self.__db.login(connection, localDevice)
         return { "localPlayerToken" : str(localPlayerUUID) }
 
     def writePlayerData(self, handler, connection, localPlayer, data):
         print("WRITE PLAYER DATA '%s' for player %s on connection %s " % (str(data), localPlayer, connection))
-        connectionUUID = uuid.UUID(connection)
-        localPlayerUUID = uuid.UUID(localPlayer)
-        playerUUID = self.__playerByLocalPlayerAndConnection[(localPlayerUUID, connectionUUID)]
-        gameUUID = self.__gameByConnection[connectionUUID]
-        self.__dataPerPlayerAndGame[(playerUUID, gameUUID)] = data
-        return { "status" : 1 }
+        success = self.__db.writePlayerData(connection, localPlayer, data)
+        return { "status" : 1 if success else 0 }
 
     def readPlayerData(self, handler, connection, localPlayer):
         print("READ PLAYER DATA for player %s on connection %s " % (localPlayer, connection))
-        connectionUUID = uuid.UUID(connection)
-        localPlayerUUID = uuid.UUID(localPlayer)
-        playerUUID = self.__playerByLocalPlayerAndConnection[(localPlayerUUID, connectionUUID)]
-        gameUUID = self.__gameByConnection[connectionUUID]
-        data = self.__dataPerPlayerAndGame[(playerUUID, gameUUID)]
-        return { "data" : data }
+        data = self.__db.readPlayerData(connection, localPlayer)
+        return { "data" : str(data) }
 
-import pickle
-__serverInstance = None
-def getServerInstance():
-    global __serverInstance
-    if not __serverInstance:
-        try:
-            with open("../.simple_http_server_instance", "rb") as f:
-                __serverInstance = pickle.load(f)
-        except FileNotFoundError:
-            pass
-        if not __serverInstance:
-            __serverInstance = ServerInstance()
-    return __serverInstance
+class PickleServerInstance(ServerInstance):
+    def __init__(self):
+        dbPath = ".simple_http_server.pickle"
+        ServerInstance.__init__(self, backend.PickleBackend(dbPath))
+
+class Sqlite3ServerInstance(ServerInstance):
+    def __init__(self):
+        dbPath = ".simple_http_server.db"
+        ServerInstance.__init__(self, backend.Sqlite3Backend(dbPath))
+
+__serverInstanceClass = PickleServerInstance
+if 'sqlite3' in sys.argv:
+    __serverInstanceClass = Sqlite3ServerInstance
+__serverInstance = __serverInstanceClass()
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
-    
+
     def _parse_GET(self):
         command, argumentString = self.path.split("?")
         argumentValueByName = {}
@@ -107,30 +82,27 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                     value = ""
                 argumentValueByName[name] = urllib.parse.unquote_plus(value)
         return command, argumentValueByName
-    
-    def _GET_json(self, response):
-        self.send_response(200)
-        self.send_header("Content-type", "application/json")
+
+    def _send_header(self, code, content_type):
+        self.send_response(code)
+        self.send_header("Content-type", content_type)
         self.end_headers()
+
+    def _GET_json(self, response):
+        self._send_header(200, "application/json")
         self.wfile.write(("%s\n" % json.dumps(response)).encode())
 
     def _GET_html(self, response):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        
+        self._send_header(200, "text/html")
         lst = ['%s=%s' % (name, value) for name, value in response.items()]
         self.wfile.write(("%s\n"% "\n".join(lst)).encode())
 
     def _respond_error(self, code, error, format="json"):
-        self.send_response(code)
         if format == "json":
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
+            self._send_header(code, "application/json")
             self.wfile.write(('{ "error" : "%s" }\n' % str(error)).encode())
         else:
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
+            self._send_header(code, "text/html")
             self.wfile.write(('error=%s\n' % str(error)).encode())
 
     def do_GET(self):
@@ -141,10 +113,11 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self._respond_error(400, e)
             return
         format = argumentValueByName.pop("response", "json")
-        instance = getServerInstance()
+        instance = __serverInstance
         func = getattr(instance, command[1:])
         try:
             response = func(self, **argumentValueByName)
+            print("-> ", response)
         except TypeError as e:
             self._respond_error(400, e, format)
             return
@@ -167,8 +140,7 @@ def run():
             httpd.serve_forever()
     except:
         if __serverInstance:
-            with open("../.simple_http_server_instance", "wb") as f:
-                pickle.dump(__serverInstance, f)
+            __serverInstance.close()
 
 if __name__ == "__main__":
     run()
