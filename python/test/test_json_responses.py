@@ -21,13 +21,16 @@ import uuid
 import urllib.request
 import urllib.parse
 
+
 import unittest
+
 
 gameUUID = uuid.UUID("12345678-1234-5678-1234-567812345678")
 localDeviceUUID = uuid.uuid1(clock_seq=0)
 #host = "multiplay.ludo.digital"
 host = "localhost"
 port = 12345
+
 
 def _get_json_server_response(command, args):
     argsStr = urllib.parse.urlencode(args)
@@ -85,4 +88,15 @@ class TestServerConnection(unittest.TestCase):
         self.assertEqual(1, int(data['score']))
 
 if __name__ == '__main__':
+    import sys
+    import os
+    from os import path
+
+    sys.path.append(path.normpath(path.join(path.dirname(path.realpath(path.join(os.getcwd(), path.expanduser(__file__)))), "..")))
+    sys.path.append(path.normpath(path.join(path.dirname(path.realpath(path.join(os.getcwd(), path.expanduser(__file__)))), path.join("..", "multiplay"))))
+
+    from multiplay import simple_http_server
+
+    simple_http_server.runOnThread(port)
     unittest.main()
+    simple_http_server.shutdown()

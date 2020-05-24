@@ -21,12 +21,11 @@ import http.server
 import uuid
 import urllib.parse
 import json
-import backend
 import sys
 
 class ServerInstance(object):
     def __init__(self, db):
-        self.__db = backend.PickleBackend(dbPath)
+        self.__db = db
         self.__db.open()
 
     def close(self):
@@ -55,19 +54,17 @@ class ServerInstance(object):
 class PickleServerInstance(ServerInstance):
     def __init__(self):
         dbPath = ".simple_http_server.pickle"
-        ServerInstance.__init__(self, backend.PickleBackend(dbPath))
+        from backend import PickleBackend as Backend
+        ServerInstance.__init__(self, Backend(dbPath))
 
 class Sqlite3ServerInstance(ServerInstance):
     def __init__(self):
         dbPath = ".simple_http_server.db"
-        ServerInstance.__init__(self, backend.Sqlite3Backend(dbPath))
-
-__serverInstanceClass = PickleServerInstance
-if 'sqlite3' in sys.argv:
-    __serverInstanceClass = Sqlite3ServerInstance
-__serverInstance = __serverInstanceClass()
+        from backend import Sqlite3Backend as Backend
+        ServerInstance.__init__(self, Backend(dbPath))
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
+    serverInstance = None
 
     def _parse_GET(self):
         command, argumentString = self.path.split("?")
@@ -113,7 +110,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self._respond_error(400, e)
             return
         format = argumentValueByName.pop("response", "json")
-        instance = __serverInstance
+        instance = RequestHandler.serverInstance
         func = getattr(instance, command[1:])
         try:
             response = func(self, **argumentValueByName)
@@ -132,15 +129,43 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         print("POST")
 
-def run():
-    server_address = ('', 12345)
+__httpd = None
+
+def run(port):
+    __serverInstanceClass = PickleServerInstance
+    if 'sqlite3' in sys.argv:
+        __serverInstanceClass = Sqlite3ServerInstance
+    RequestHandler.serverInstance = __serverInstanceClass()
+
+    server_address = ('', port)
     try:
         with http.server.HTTPServer(server_address, RequestHandler) as httpd:
+            global __httpd
+            __httpd = httpd
             print("serving at ", httpd.server_address)
             httpd.serve_forever()
     except:
-        if __serverInstance:
-            __serverInstance.close()
+        if RequestHandler.serverInstance:
+            RequestHandler.serverInstance.close()
+
+def runOnThread(port):
+    import threading
+    t = threading.Thread(target=run, args=(port,), daemon=True)
+    t.start()
+    import time
+    time.sleep(0.1)
+
+def shutdown():
+    global __httpd
+    httpd = __httpd
+    if httpd:
+        httpd.shutdown()
+    if RequestHandler.serverInstance:
+        RequestHandler.serverInstance.close()
 
 if __name__ == "__main__":
-    run()
+    port = 12345
+    for i, arg in enumerate(sys.argv):
+        if arg == '-p' or arg == '--port':
+            port = int(sys.argv[i + 1])
+    run(port)
