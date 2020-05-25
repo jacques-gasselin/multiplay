@@ -88,12 +88,9 @@ class TestServerConnection(unittest.TestCase):
         self.assertEqual(1, int(data['score']))
 
 if __name__ == '__main__':
-    import sys
-    import os
-    from os import path
 
-    sys.path.append(path.normpath(path.join(path.dirname(path.realpath(path.join(os.getcwd(), path.expanduser(__file__)))), "..")))
-    sys.path.append(path.normpath(path.join(path.dirname(path.realpath(path.join(os.getcwd(), path.expanduser(__file__)))), path.join("..", "multiplay"))))
+    import pathfix
+    pathfix.fix_sys_path()
 
     from multiplay import simple_http_server
 

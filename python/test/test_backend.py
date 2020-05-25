@@ -16,11 +16,8 @@
     limitations under the License.
 '''
 
-import sys
-import os
-from os import path
-
-sys.path.append(path.normpath(path.join(path.dirname(path.realpath(path.join(os.getcwd(), path.expanduser(__file__)))), "..")))
+import pathfix
+pathfix.fix_sys_path()
 
 import unittest
 from multiplay import backend

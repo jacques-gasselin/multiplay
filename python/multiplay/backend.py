@@ -180,7 +180,7 @@ class Sqlite3Backend(Backend):
 
     def _createPlayerForDevice(self, localDeviceUUID):
         cur = self.__conn.cursor()
-        cur.execute('INSERT INTO player (auth_token) VALUES ("none")')
+        cur.execute('INSERT INTO player (display_name) VALUES ("none")')
         playerID = cur.lastrowid
         cur.close()
         return playerID
@@ -225,7 +225,7 @@ class Sqlite3Backend(Backend):
         self.__conn = sqlite3.connect(self.__dbPath)
         cur = self.__conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS connection (connection_id INTEGER PRIMARY KEY, connection_uuid TEXT, game_uuid TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player (player_id INTEGER PRIMARY KEY, auth_token TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS player (player_id INTEGER PRIMARY KEY, display_name TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS local_player_by_connection (local_player_uuid TEXT, connection_uuid TEXT, player_id INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_by_device (device_uuid text, player_id INTEGER)")
