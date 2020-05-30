@@ -76,6 +76,37 @@ class TestBackend(object):
         result = db.readPlayerData(conn, localPlayer)
         self.assertEqual(result, "testing")
 
+    def test_modifyPlayerData(self):
+        db = self._createInstance()
+        db.open()
+        db.logging = True
+        conn = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        self.assertTrue(conn is not None)
+        localPlayer = db.login(conn, "00000000-0000-0000-0000-000000000000")
+        self.assertTrue(localPlayer is not None)
+        result = db.writePlayerData(conn, localPlayer, "testing")
+        self.assertTrue(result)
+        result = db.readPlayerData(conn, localPlayer)
+        self.assertEqual(result, "testing")
+        result = result + "2"
+        self.assertEqual(result, "testing2")
+        result = db.writePlayerData(conn, localPlayer, result)
+        self.assertTrue(result)
+        result = db.readPlayerData(conn, localPlayer)
+        self.assertEqual(result, "testing2")
+
+    def test_setDisplayName(self):
+        db = self._createInstance()
+        db.open()
+        conn = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        self.assertTrue(conn is not None)
+        localPlayer = db.login(conn, "00000000-0000-0000-0000-000000000000")
+        self.assertTrue(localPlayer is not None)
+        result = db.setPlayerDisplayName(conn, localPlayer, "player 1")
+        self.assertTrue(result)
+        result = db.getPlayerDisplayName(conn, localPlayer)
+        self.assertEqual(result, "player 1")
+
 class TestPickleBackend(unittest.TestCase, TestBackend):
     def __init__(self, *args):
         unittest.TestCase.__init__(self, *args)

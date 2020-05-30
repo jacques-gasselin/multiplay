@@ -19,13 +19,26 @@ import uuid
 
 class Backend(object):
     def __init__(self):
-        pass
+        self.__isLogging = False
 
     def _isLocalPlayerEqualToPlayer(self, connectionUUID, localPlayerUUID, playerID):
+        if self.logging:
+            print("_isLocalPlayerEqualToPlayer(%s, %s, %s)" % (connectionUUID, localPlayerUUID, str(playerID)))
         if playerID is None or localPlayerUUID is None:
             return False
         foundPlayerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         return playerID == foundPlayerID
+
+    def isLogging(self):
+        try:
+            return self.__isLogging
+        except AttributeError:
+            return False
+
+    def setIsLogging(self, TrueOrFalse):
+        self.__isLogging = TrueOrFalse
+
+    logging = property(isLogging, setIsLogging)
 
     def open(self):
         pass
@@ -44,6 +57,8 @@ class Backend(object):
         return connectionUUID
 
     def login(self, connectionUUID, localDeviceUUID):
+        if self.logging:
+            print("login(%s, %s)" % (connectionUUID, localDeviceUUID))
         if isinstance(localDeviceUUID, str):
             localDeviceUUID = uuid.UUID(localDeviceUUID)
         if isinstance(connectionUUID, str):
@@ -51,11 +66,15 @@ class Backend(object):
         localPlayerUUID = self._findLocalPlayerForConnection(connectionUUID)
         playerID = self._findPlayerForDevice(localDeviceUUID)
         if self._isLocalPlayerEqualToPlayer(connectionUUID, localDeviceUUID, playerID):
+            if self.logging:
+                print("[local found] -> ", localPlayerUUID)
             return localPlayerUUID
         if playerID is None:
             playerID = self._createPlayerForDevice(localDeviceUUID)
         localPlayerUUID = uuid.uuid5(localDeviceUUID, str(playerID))
         self._storeLocalPlayerForConnection(playerID, localPlayerUUID, connectionUUID)
+        if self.logging:
+            print("[created] -> ", localPlayerUUID)
         return localPlayerUUID
 
     def writePlayerData(self, connectionUUID, localPlayerUUID, data):
@@ -76,6 +95,22 @@ class Backend(object):
         gameUUID = self._findGameByConnection(connectionUUID)
         return self._loadPlayerData(playerID, gameUUID)
 
+    def setPlayerDisplayName(self, connectionUUID, localPlayerUUID, name):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        return self._setPlayerDisplayName(playerID, name)
+
+    def getPlayerDisplayName(self, connectionUUID, localPlayerUUID):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        return self._getPlayerDisplayName(playerID)
+
 class PickleBackend(Backend):
     def __init__(self, dbPath):
         Backend.__init__(self)
@@ -84,6 +119,7 @@ class PickleBackend(Backend):
         self.__deviceByConnection = {}
         self.__playerByLocalPlayerAndConnection = {}
         self.__playerByDevice = {}
+        self.__playerDisplayName = {}
         self.__dataPerPlayerAndGame = {}
         self.__dbPath = dbPath
 
@@ -109,9 +145,14 @@ class PickleBackend(Backend):
         self.__playerByLocalPlayerAndConnection[(localPlayerUUID, connectionUUID)] = playerID
 
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
+        if self.logging:
+            print("_findPlayerForLocalPlayerAndConnection(%s, %s)" % (localPlayerUUID, connectionUUID))
         if localPlayerUUID is None:
             return None
-        return self.__playerByLocalPlayerAndConnection.get((localPlayerUUID, connectionUUID), None)
+        result = self.__playerByLocalPlayerAndConnection.get((localPlayerUUID, connectionUUID), None)
+        if self.logging:
+            print("-> ", result)
+        return result
 
     def _storePlayerData(self, playerID, gameUUID, data):
         if playerID is None or gameUUID is None:
@@ -124,12 +165,27 @@ class PickleBackend(Backend):
             return None
         return self.__dataPerPlayerAndGame.get((playerID, gameUUID), None)
 
+    def _setPlayerDisplayName(self, playerID, name):
+        if playerID is None or name is None:
+            return False
+        try:
+            self.__playerDisplayName[playerID] = name
+        except AttributeError:
+            self.__playerDisplayName = { playerID : name }
+        return True
+
+    def _getPlayerDisplayName(self, playerID):
+        if playerID is None:
+            return None
+        return self.__playerDisplayName[playerID]
+
     def reset(self):
         self.__gameByConnection = {}
         self.__localPlayerByConnection = {}
         self.__deviceByConnection = {}
         self.__playerByLocalPlayerAndConnection = {}
         self.__playerByDevice = {}
+        self.__playerDisplayName = {}
         self.__dataPerPlayerAndGame = {}
 
     def open(self):
@@ -153,24 +209,46 @@ class Sqlite3Backend(Backend):
         Backend.__init__(self)
         self.__dbPath = dbPath
 
-    def _storeConnection(self, connectionUUID, gameUUID):
+    def _executeQuery(self, query):
+        if self.logging:
+            print(query)
         cur = self.__conn.cursor()
-        cur.execute('INSERT OR REPLACE INTO connection (connection_uuid, game_uuid) VALUES ("%s", "%s")' % (str(connectionUUID), str(gameUUID)))
         cur.close()
 
-    def _findGameByConnection(self, connectionUUID):
+    def _executeQueryAndFetchOne(self, query):
+        if self.logging:
+            print(query)
         cur = self.__conn.cursor()
-        cur.execute('SELECT game_uuid FROM connection WHERE connection_uuid="%s"' % str(connectionUUID))
         result = cur.fetchone()
+        if self.logging:
+            print(result)
         cur.close()
+        return result
+
+    def _executeQueryAndReturnRowId(self, query):
+        if self.logging:
+            print(query)
+        cur = self.__conn.cursor()
+        result = cur.lastrowid
+        if self.logging:
+            print(result)
+        cur.close()
+        return result
+
+    def _storeConnection(self, connectionUUID, gameUUID):
+        selectQuery = 'INSERT OR REPLACE INTO connection (connection_uuid, game_uuid) VALUES ("%s", "%s")' % (str(connectionUUID), str(gameUUID))
+        self._executeQuery(selectQuery)
+
+    def _findGameByConnection(self, connectionUUID):
+        selectQuery = 'SELECT game_uuid FROM connection WHERE connection_uuid="%s"' % str(connectionUUID)
+        result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
 
     def _findLocalPlayerForConnection(self, connectionUUID):
-        cur = self.__conn.cursor()
-        cur.execute('SELECT local_player_uuid FROM local_player_by_connection WHERE connection_uuid="%s"' % str(connectionUUID))
-        result = cur.fetchone()
+        selectQuery = 'SELECT local_player_uuid FROM local_player_by_connection WHERE connection_uuid="%s"' % str(connectionUUID)
+        result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -179,24 +257,26 @@ class Sqlite3Backend(Backend):
         return None
 
     def _createPlayerForDevice(self, localDeviceUUID):
-        cur = self.__conn.cursor()
-        cur.execute('INSERT INTO player (display_name) VALUES ("none")')
-        playerID = cur.lastrowid
-        cur.close()
+        insertQuery = 'INSERT INTO player (display_name) VALUES ("none")'
+        playerID = self._executeQueryAndReturnRowId(insertQuery)
         return playerID
 
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
-        cur = self.__conn.cursor()
-        cur.execute('INSERT OR REPLACE INTO local_player_by_connection VALUES ("%s", "%s", %i)' % (str(localPlayerUUID), str(connectionUUID), playerID))
-        cur.close()
+        if self.logging:
+            print("_storeLocalPlayerForConnection(%i, %s, %s):" % (playerID, localPlayerUUID, connectionUUID))
+        if playerID is None or localPlayerUUID is None or connectionUUID is None:
+            return False
+        insertQuery = 'INSERT OR REPLACE INTO local_player_by_connection VALUES ("%s", "%s", %i)' % (str(localPlayerUUID), str(connectionUUID), playerID)
+        self._executeQuery(insertQuery)
+        return True
 
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
-        if localPlayerUUID is None:
+        if self.logging:
+            print("_findPlayerForLocalPlayerAndConnection(%s, %s)" % (localPlayerUUID, connectionUUID))
+        if localPlayerUUID is None or connectionUUID is None:
             return None
-        cur = self.__conn.cursor()
-        cur.execute('SELECT player_id FROM local_player_by_connection WHERE connection_uuid="%s" AND local_player_uuid="%s"' % (str(connectionUUID), str(localPlayerUUID)))
-        result = cur.fetchone()
-        cur.close()
+        selectQuery = 'SELECT player_id FROM local_player_by_connection WHERE connection_uuid="%s" AND local_player_uuid="%s"' % (str(connectionUUID), str(localPlayerUUID))
+        result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -204,18 +284,17 @@ class Sqlite3Backend(Backend):
     def _storePlayerData(self, playerID, gameUUID, data):
         if playerID is None or gameUUID is None:
             return False
-        cur = self.__conn.cursor()
-        cur.execute('INSERT INTO player_data (player_id, game_uuid, data) VALUES (%i, "%s", "%s")' % (playerID, str(gameUUID), str(data)))
-        cur.close()
+        deleteQuery = 'DELETE FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID))
+        insertQuery = 'INSERT INTO player_data (player_id, game_uuid, data) VALUES (%i, "%s", "%s")' % (playerID, str(gameUUID), str(data))
+        self._executeQuery(deleteQuery)
+        self._executeQuery(insertQuery)
         return True
 
     def _loadPlayerData(self, playerID, gameUUID):
         if playerID is None or gameUUID is None:
             return None
-        cur = self.__conn.cursor()
-        cur.execute('SELECT data FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID)))
-        result = cur.fetchone()
-        cur.close()
+        selectQuery = 'SELECT data FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID))
+        result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
