@@ -71,6 +71,7 @@ class Backend(object):
             return localPlayerUUID
         if playerID is None:
             playerID = self._createPlayerForDevice(localDeviceUUID)
+            assert(playerID is not None)
         localPlayerUUID = uuid.uuid5(localDeviceUUID, str(playerID))
         self._storeLocalPlayerForConnection(playerID, localPlayerUUID, connectionUUID)
         if self.logging:
@@ -213,12 +214,14 @@ class Sqlite3Backend(Backend):
         if self.logging:
             print(query)
         cur = self.__conn.cursor()
+        cur.execute(query)
         cur.close()
 
     def _executeQueryAndFetchOne(self, query):
         if self.logging:
             print(query)
         cur = self.__conn.cursor()
+        cur.execute(query)
         result = cur.fetchone()
         if self.logging:
             print(result)
@@ -229,6 +232,7 @@ class Sqlite3Backend(Backend):
         if self.logging:
             print(query)
         cur = self.__conn.cursor()
+        cur.execute(query)
         result = cur.lastrowid
         if self.logging:
             print(result)
@@ -262,8 +266,9 @@ class Sqlite3Backend(Backend):
         return playerID
 
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
+        assert(playerID is not None)
         if self.logging:
-            print("_storeLocalPlayerForConnection(%i, %s, %s):" % (playerID, localPlayerUUID, connectionUUID))
+            print("_storeLocalPlayerForConnection(%s, %s, %s):" % (str(playerID), localPlayerUUID, connectionUUID))
         if playerID is None or localPlayerUUID is None or connectionUUID is None:
             return False
         insertQuery = 'INSERT OR REPLACE INTO local_player_by_connection VALUES ("%s", "%s", %i)' % (str(localPlayerUUID), str(connectionUUID), playerID)
@@ -294,6 +299,22 @@ class Sqlite3Backend(Backend):
         if playerID is None or gameUUID is None:
             return None
         selectQuery = 'SELECT data FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID))
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
+    def _setPlayerDisplayName(self, playerID, name):
+        if playerID is None or name is None:
+            return False
+        updateQuery = 'UPDATE player SET display_name="%s" WHERE player_id=%i' % (name, playerID)
+        self._executeQuery(updateQuery)
+        return True
+
+    def _getPlayerDisplayName(self, playerID):
+        if playerID is None:
+            return None
+        selectQuery = 'SELECT display_name FROM player WHERE player_id=%i' % (playerID)
         result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
