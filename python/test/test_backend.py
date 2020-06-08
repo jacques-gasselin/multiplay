@@ -23,6 +23,18 @@ import unittest
 from multiplay import backend
 
 class TestBackend(object):
+    def _connectFromDefaultAddress(self, db):
+        return db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+
+    def _connectFromOtherAddress(self, db):
+        return db.connect("0.0.0.1:1234", "12345678-1234-5678-1234-567812345678")
+
+    def _loginFromDefaultDevice(self, db, conn):
+        return db.login(conn, "00000000-0000-0000-0000-000000000000")
+
+    def _loginFromOtherDevice(self, db, conn):
+        return db.login(conn, "00000000-0001-0000-1000-000000000000")
+
     def test_open(self):
         db = self._createInstance()
         db.open()
@@ -35,31 +47,31 @@ class TestBackend(object):
     def test_connect(self):
         db = self._createInstance()
         db.open()
-        token = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        token = self._connectFromDefaultAddress(db)
         self.assertTrue(token is not None)
-        token2 = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        token2 = self._connectFromDefaultAddress(db)
         self.assertEqual(token, token2)
-        token3 = db.connect("0.0.0.1:1234", "12345678-1234-5678-1234-567812345678")
+        token3 = self._connectFromOtherAddress(db)
         self.assertNotEqual(token, token3)
 
     def test_login(self):
         db = self._createInstance()
         db.open()
-        conn = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        conn = self._connectFromDefaultAddress(db)
         self.assertTrue(conn is not None)
-        localPlayer = db.login(conn, "00000000-0000-0000-0000-000000000000")
+        localPlayer = self._loginFromDefaultDevice(db, conn)
         self.assertTrue(localPlayer is not None)
         # differing device should not return same player, we can't rely on IP addresses only
-        localPlayer2 = db.login(conn, "10000000-0000-0000-0000-000000000001")
+        localPlayer2 = self._loginFromOtherDevice(db, conn)
         self.assertTrue(localPlayer2 is not None)
         self.assertNotEqual(localPlayer, localPlayer2)
 
     def test_writePlayerData(self):
         db = self._createInstance()
         db.open()
-        conn = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        conn = self._connectFromDefaultAddress(db)
         self.assertTrue(conn is not None)
-        localPlayer = db.login(conn, "00000000-0000-0000-0000-000000000000")
+        localPlayer = self._loginFromDefaultDevice(db, conn)
         self.assertTrue(localPlayer is not None)
         result = db.writePlayerData(conn, localPlayer, "testing")
         self.assertTrue(result)
@@ -67,9 +79,9 @@ class TestBackend(object):
     def test_readPlayerData(self):
         db = self._createInstance()
         db.open()
-        conn = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        conn = self._connectFromDefaultAddress(db)
         self.assertTrue(conn is not None)
-        localPlayer = db.login(conn, "00000000-0000-0000-0000-000000000000")
+        localPlayer = self._loginFromDefaultDevice(db, conn)
         self.assertTrue(localPlayer is not None)
         result = db.writePlayerData(conn, localPlayer, "testing")
         self.assertTrue(result)
@@ -80,9 +92,9 @@ class TestBackend(object):
         db = self._createInstance()
         db.open()
         db.logging = True
-        conn = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        conn = self._connectFromDefaultAddress(db)
         self.assertTrue(conn is not None)
-        localPlayer = db.login(conn, "00000000-0000-0000-0000-000000000000")
+        localPlayer = self._loginFromDefaultDevice(db, conn)
         self.assertTrue(localPlayer is not None)
         result = db.writePlayerData(conn, localPlayer, "testing")
         self.assertTrue(result)
@@ -98,14 +110,32 @@ class TestBackend(object):
     def test_setDisplayName(self):
         db = self._createInstance()
         db.open()
-        conn = db.connect("0.0.0.0:1234", "12345678-1234-5678-1234-567812345678")
+        conn = self._connectFromDefaultAddress(db)
         self.assertTrue(conn is not None)
-        localPlayer = db.login(conn, "00000000-0000-0000-0000-000000000000")
+        localPlayer = self._loginFromDefaultDevice(db, conn)
         self.assertTrue(localPlayer is not None)
         result = db.setPlayerDisplayName(conn, localPlayer, "player 1")
         self.assertTrue(result)
         result = db.getPlayerDisplayName(conn, localPlayer)
         self.assertEqual(result, "player 1")
+        conn2 = self._connectFromOtherAddress(db)
+        localPlayer2 = self._loginFromOtherDevice(db, conn2)
+        result = db.getPlayerDisplayName(conn2, localPlayer2)
+        self.assertEqual(result, "player 1")
+
+    def test_getFriendCode(self):
+        db = self._createInstance()
+        db.open()
+        conn = self._connectFromDefaultAddress(db)
+        self.assertTrue(conn is not None)
+        localPlayer = self._loginFromDefaultDevice(db, conn)
+        self.assertTrue(localPlayer is not None)
+        code = db.getPlayerFriendCode(conn, localPlayer)
+        self.assertTrue(code is not None)
+        conn2 = self._connectFromOtherAddress(db)
+        localPlayer2 = self._loginFromOtherDevice(db, conn2)
+        result = db.getPlayerFriendCode(conn2, localPlayer2)
+        self.assertEqual(code, result)
 
 class TestPickleBackend(unittest.TestCase, TestBackend):
     def __init__(self, *args):

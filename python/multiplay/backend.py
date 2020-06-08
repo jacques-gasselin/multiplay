@@ -112,6 +112,14 @@ class Backend(object):
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         return self._getPlayerDisplayName(playerID)
 
+    def getPlayerFriendCode(self, connectionUUID, localPlayerUUID):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        return self._getPlayerFriendCode(playerID)
+
 class PickleBackend(Backend):
     def __init__(self, dbPath):
         Backend.__init__(self)
