@@ -5,7 +5,7 @@ See the markdeep document at README.md.html for more details
 
 To test start the server
 
- python3 python/simple_http_server.py
+ python3 python/multiplay/simple_http_server.py
  
 Then run the tests
 
