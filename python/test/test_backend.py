@@ -157,6 +157,26 @@ class TestBackend(object):
         sessionToken = db.createSession(conn, localPlayer)
         self.assertTrue(sessionToken is not None)
 
+    def test_setSessionDisplayName(self):
+        db = self._db
+        conn = self._connectFromDefaultAddress(db)
+        localPlayer = self._loginFromDefaultDevice(db, conn)
+        localSession = db.createSession(conn, localPlayer)
+        displayName = db.getSessionDisplayName(conn, localSession)
+        self.assertTrue(displayName is not None)
+        result = db.setSessionDisplayName(conn, localSession, "session 1")
+        self.assertTrue(result)
+        displayName = db.getSessionDisplayName(conn, localSession)
+        self.assertEqual(displayName, "session 1")
+
+    def test_getSessionShareCode(self):
+        db = self._db
+        conn = self._connectFromDefaultAddress(db)
+        localPlayer = self._loginFromDefaultDevice(db, conn)
+        localSession = db.createSession(conn, localPlayer)
+        code = db.getSessionShareCode(conn, localSession)
+        self.assertTrue(code is not None)
+
 class TestPickleBackend(unittest.TestCase, TestBackend):
     def __init__(self, *args):
         unittest.TestCase.__init__(self, *args)

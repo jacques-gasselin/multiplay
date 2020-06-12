@@ -130,6 +130,14 @@ class Backend(object):
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         return self._setPlayerDisplayName(playerID, name)
 
+    def setSessionDisplayName(self, connectionUUID, localSessionUUID, name):
+        if isinstance(localSessionUUID, str):
+            localSessionUUID = uuid.UUID(localSessionUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        sessionID = self._findSessionForLocalSessionAndConnection(localSessionUUID, connectionUUID)
+        return self._setSessionDisplayName(sessionID, name)
+
     def getPlayerDisplayName(self, connectionUUID, localPlayerUUID):
         if isinstance(localPlayerUUID, str):
             localPlayerUUID = uuid.UUID(localPlayerUUID)
@@ -138,6 +146,14 @@ class Backend(object):
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         return self._getPlayerDisplayName(playerID)
 
+    def getSessionDisplayName(self, connectionUUID, localSessionUUID):
+        if isinstance(localSessionUUID, str):
+            localSessionUUID = uuid.UUID(localSessionUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        sessionID = self._findSessionForLocalSessionAndConnection(localSessionUUID, connectionUUID)
+        return self._getSessionDisplayName(sessionID)
+
     def getPlayerFriendCode(self, connectionUUID, localPlayerUUID):
         if isinstance(localPlayerUUID, str):
             localPlayerUUID = uuid.UUID(localPlayerUUID)
@@ -145,6 +161,14 @@ class Backend(object):
             connectionUUID = uuid.UUID(connectionUUID)
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         return self._getPlayerFriendCode(playerID)
+
+    def getSessionShareCode(self, connectionUUID, localSessionUUID):
+        if isinstance(localSessionUUID, str):
+            localSessionUUID = uuid.UUID(localSessionUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        sessionID = self._findSessionForLocalSessionAndConnection(localSessionUUID, connectionUUID)
+        return self._getSessionShareCode(sessionID)
 
     def authenticateLocalPlayer(self, connectionUUID, localPlayerUUID, auth_token_type, auth_token):
         if isinstance(localPlayerUUID, str):
@@ -175,6 +199,7 @@ class Backend(object):
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         gameUUID = self._findGameByConnection(connectionUUID)
         sessionID = self._createSession(gameUUID, playerID)
+        assert(sessionID is not None)
         localSessionUUID = uuid.uuid5(localPlayerUUID, str(sessionID))
         self._storeLocalSessionForConnection(sessionID, localSessionUUID, connectionUUID)
         return localSessionUUID
@@ -252,6 +277,16 @@ class PickleBackend(Backend):
             print("-> ", result)
         return result
 
+    def _findSessionForLocalSessionAndConnection(self, localSessionUUID, connectionUUID):
+        if self.logging:
+            print("_findSessionForLocalSessionAndConnection(%s, %s)" % (localSessionUUID, connectionUUID))
+        if localSessionUUID is None:
+            return None
+        result = self.__sessionByLocalSessionAndConnection.get((localSessionUUID, connectionUUID), None)
+        if self.logging:
+            print("-> ", result)
+        return result
+
     def _storePlayerData(self, playerID, gameUUID, data):
         if playerID is None or gameUUID is None:
             return False
@@ -272,15 +307,34 @@ class PickleBackend(Backend):
             self.__playerDisplayName = { playerID : name }
         return True
 
+    def _setSessionDisplayName(self, sessionID, name):
+        if sessionID is None or name is None:
+            return False
+        try:
+            self.__sessionDisplayName[sessionID] = name
+        except AttributeError:
+            self.__sessionDisplayName = { sessionID : name }
+        return True
+
     def _getPlayerDisplayName(self, playerID):
         if playerID is None:
             return None
         return self.__playerDisplayName[playerID]
 
+    def _getSessionDisplayName(self, sessionID):
+        if sessionID is None:
+            return None
+        return self.__sessionDisplayName[sessionID]
+
     def _getPlayerFriendCode(self, playerID):
         if playerID is None:
             return None
         return self.__playerFriendCode[playerID]
+
+    def _getSessionShareCode(self, sessionID):
+        if sessionID is None:
+            return None
+        return self.__sessionShareCode[sessionID]
 
     def reset(self):
         self.__gameByConnection = {}
@@ -474,6 +528,13 @@ class Sqlite3Backend(Backend):
         self._executeQuery(updateQuery)
         return True
 
+    def _setSessionDisplayName(self, sessionID, name):
+        if sessionID is None or name is None:
+            return False
+        updateQuery = 'UPDATE session SET display_name="%s" WHERE session_id=%i' % (name, sessionID)
+        self._executeQuery(updateQuery)
+        return True
+
     def _getPlayerDisplayName(self, playerID):
         if playerID is None:
             return None
@@ -483,10 +544,28 @@ class Sqlite3Backend(Backend):
             return result[0]
         return None
 
+    def _getSessionDisplayName(self, sessionID):
+        if sessionID is None:
+            return None
+        selectQuery = 'SELECT display_name FROM session WHERE session_id=%i' % (sessionID)
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
     def _getPlayerFriendCode(self, playerID):
         if playerID is None:
             return None
         selectQuery = 'SELECT friend_code FROM player WHERE player_id=%i' % (playerID)
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
+    def _getSessionShareCode(self, sessionID):
+        if sessionID is None:
+            return None
+        selectQuery = 'SELECT share_code FROM session WHERE session_id=%i' % (sessionID)
         result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
