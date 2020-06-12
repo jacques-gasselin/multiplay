@@ -150,6 +150,13 @@ class TestBackend(object):
         code = db.getPlayerFriendCode(conn, localPlayer)
         self.assertTrue(code is not None)
 
+    def test_createSession(self):
+        db = self._db
+        conn = self._connectFromDefaultAddress(db)
+        localPlayer = self._loginFromDefaultDevice(db, conn)
+        sessionToken = db.createSession(conn, localPlayer)
+        self.assertTrue(sessionToken is not None)
+
 class TestPickleBackend(unittest.TestCase, TestBackend):
     def __init__(self, *args):
         unittest.TestCase.__init__(self, *args)

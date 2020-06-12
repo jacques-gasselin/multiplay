@@ -37,7 +37,18 @@ class Backend(object):
         parts = [random.choice(first), random.choice(second), random.choice(numbers), random.choice(numbers)]
         return "".join(parts)
 
+    def _createSessionDisplayName(self):
+        first = ["Session", "Game", "Match"]
+        numbers = "0123456789"
+        parts = [random.choice(first), random.choice(numbers), random.choice(numbers), random.choice(numbers), random.choice(numbers)]
+        return "".join(parts)
+
     def _createFriendCode(self):
+        set = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        length = 8
+        return "".join([random.choice(set) for i in range(length)])
+
+    def _createSessionShareCode(self):
         set = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         length = 8
         return "".join([random.choice(set) for i in range(length)])
@@ -90,6 +101,8 @@ class Backend(object):
         if self.logging:
             print("[created] -> ", localPlayerUUID)
         return localPlayerUUID
+
+    ### Player Management
 
     def writePlayerData(self, connectionUUID, localPlayerUUID, data):
         if isinstance(localPlayerUUID, str):
@@ -152,18 +165,37 @@ class Backend(object):
                 #TODO migrate
                 self._storeLocalPlayerForConnection(authedPlayerID, localPlayerUUID, connectionUUID)
 
+    #### Session Management
+
+    def createSession(self, connectionUUID, localPlayerUUID):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        gameUUID = self._findGameByConnection(connectionUUID)
+        sessionID = self._createSession(gameUUID, playerID)
+        localSessionUUID = uuid.uuid5(localPlayerUUID, str(sessionID))
+        self._storeLocalSessionForConnection(sessionID, localSessionUUID, connectionUUID)
+        return localSessionUUID
+
 class PickleBackend(Backend):
     def __init__(self, dbPath):
         Backend.__init__(self)
         self.__gameByConnection = {}
         self.__localPlayerByConnection = {}
+        self.__localSessionByConnection = {}
         self.__deviceByConnection = {}
         self.__playerByLocalPlayerAndConnection = {}
+        self.__sessionByLocalSessionAndConnection = {}
         self.__playerByAuthToken = {}
         self.__playerByDevice = {}
         self.__playerDisplayName = {}
         self.__playerFriendCode = {}
         self.__dataPerPlayerAndGame = {}
+        self.__sessionByGame = {}
+        self.__sessionDisplayName = {}
+        self.__sessionShareCode = {}
         self.__dbPath = dbPath
 
     def _storeConnection(self, connectionUUID, gameUUID):
@@ -193,9 +225,22 @@ class PickleBackend(Backend):
         self.__playerFriendCode[playerID] = friendCode
         return playerID
 
+    def _createSession(self, gameUUID, playerID):
+        displayName = self._createSessionDisplayName()
+        shareCode = self._createSessionShareCode()
+        sessionID = uuid.uuid4()
+        self.__sessionByGame[gameUUID] = sessionID
+        self.__sessionDisplayName[sessionID] = displayName
+        self.__sessionShareCode[sessionID] = shareCode
+        return sessionID
+
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
         self.__localPlayerByConnection[connectionUUID] = localPlayerUUID
         self.__playerByLocalPlayerAndConnection[(localPlayerUUID, connectionUUID)] = playerID
+
+    def _storeLocalSessionForConnection(self, sessionID, localSessionUUID, connectionUUID):
+        self.__localSessionByConnection[connectionUUID] = localSessionUUID
+        self.__sessionByLocalSessionAndConnection[(localSessionUUID, connectionUUID)] = sessionID
 
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
         if self.logging:
@@ -349,6 +394,15 @@ class Sqlite3Backend(Backend):
         self._executeQuery(insertQuery)
         return playerID
 
+    def _createSession(self, gameUUID, playerID):
+        displayName = self._createSessionDisplayName()
+        shareCode = self._createSessionShareCode()
+        insertQuery = 'INSERT INTO session (game_uuid, display_name, share_code, min_players, max_players) VALUES ("%s", "%s", "%s", 2, 16)' % (str(gameUUID), displayName, shareCode)
+        sessionID = self._executeQueryAndReturnRowId(insertQuery)
+        insertQuery = 'INSERT INTO player_by_session (session_id, player_id) VALUES (%i, %i)' % (sessionID, playerID)
+        self._executeQuery(insertQuery)
+        return sessionID
+
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
         assert(playerID is not None)
         if self.logging:
@@ -361,12 +415,35 @@ class Sqlite3Backend(Backend):
         self._executeQuery(insertQuery)
         return True
 
+    def _storeLocalSessionForConnection(self, sessionID, localSessionUUID, connectionUUID):
+        assert(sessionID is not None)
+        if self.logging:
+            print("_storeLocalSessionForConnection(%s, %s, %s):" % (str(sessionID), localSessionUUID, connectionUUID))
+        if sessionID is None or localSessionUUID is None or connectionUUID is None:
+            return False
+        deleteQuery = 'DELETE FROM local_session_by_connection WHERE connection_uuid="%s" AND local_session_uuid="%s"' % (str(connectionUUID), str(localSessionUUID))
+        insertQuery = 'INSERT OR REPLACE INTO local_session_by_connection VALUES ("%s", "%s", %i)' % (str(localSessionUUID), str(connectionUUID), sessionID)
+        self._executeQuery(deleteQuery)
+        self._executeQuery(insertQuery)
+        return True
+
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
         if self.logging:
             print("_findPlayerForLocalPlayerAndConnection(%s, %s)" % (localPlayerUUID, connectionUUID))
         if localPlayerUUID is None or connectionUUID is None:
             return None
         selectQuery = 'SELECT player_id FROM local_player_by_connection WHERE connection_uuid="%s" AND local_player_uuid="%s"' % (str(connectionUUID), str(localPlayerUUID))
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
+    def _findSessionForLocalSessionAndConnection(self, localSessionUUID, connectionUUID):
+        if self.logging:
+            print("_findSessionForLocalSessionAndConnection(%s, %s)" % (localSessionUUID, connectionUUID))
+        if localSessionUUID is None or connectionUUID is None:
+            return None
+        selectQuery = 'SELECT session_id FROM local_session_by_connection WHERE connection_uuid="%s" AND local_session_uuid="%s"' % (str(connectionUUID), str(localSessionUUID))
         result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
@@ -425,6 +502,10 @@ class Sqlite3Backend(Backend):
         cur.execute("CREATE TABLE IF NOT EXISTS local_player_by_connection (local_player_uuid TEXT, connection_uuid TEXT, player_id INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_by_device (device_uuid text, player_id INTEGER)")
+        cur.execute("CREATE TABLE IF NOT EXISTS session (session_id INTEGER PRIMARY KEY, game_uuid TEXT, display_name TEXT, creation_date DATE, expiry_date DATE, share_code TEXT, min_players INTEGER, max_players INTEGER)")
+        cur.execute("CREATE TABLE IF NOT EXISTS player_by_session (session_id INTEGER, player_id INTEGER)")
+        cur.execute("CREATE TABLE IF NOT EXISTS local_session_by_connection (local_session_uuid TEXT, connection_uuid TEXT, session_id INTEGER)")
+        cur.execute("CREATE TABLE IF NOT EXISTS session_data (session_id INTEGER, data TEXT)")
         cur.close()
 
     def close(self):
