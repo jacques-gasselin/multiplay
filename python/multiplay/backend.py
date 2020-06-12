@@ -16,6 +16,7 @@
     limitations under the License.
 '''
 import uuid
+import random
 
 class Backend(object):
     def __init__(self):
@@ -28,6 +29,18 @@ class Backend(object):
             return False
         foundPlayerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         return playerID == foundPlayerID
+
+    def _createDisplayName(self):
+        first = ["Super", "Mega", "Blaster", "Thunder", "Points", "Game"]
+        second = ["Killer", "Player", "Lord", "Pants", "Suit", "Flame", "Angel"]
+        numbers = "0123456789"
+        parts = [random.choice(first), random.choice(second), random.choice(numbers), random.choice(numbers)]
+        return "".join(parts)
+
+    def _createFriendCode(self):
+        set = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        length = 8
+        return "".join([random.choice(set) for i in range(length)])
 
     def isLogging(self):
         try:
@@ -120,6 +133,25 @@ class Backend(object):
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         return self._getPlayerFriendCode(playerID)
 
+    def authenticateLocalPlayer(self, connectionUUID, localPlayerUUID, auth_token_type, auth_token):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        authedPlayerID = self._findAuthenticatedPlayerForAuthToken(auth_token_type, auth_token)
+        if not authedPlayerID:
+            # if the auth token is not in our table of auth tokens we migrate the current player
+            # to be authorized and now other connections can get the same underlying player id
+            # as long as their auth token matches
+            self._authenticatePlayerForAuthToken(auth_token_type, auth_token, playerID)
+        else:
+            # if it is then we need to migrate the local player to the authed player unless they are
+            # already the same
+            if playerID != authedPlayerID:
+                #TODO migrate
+                self._storeLocalPlayerForConnection(authedPlayerID, localPlayerUUID, connectionUUID)
+
 class PickleBackend(Backend):
     def __init__(self, dbPath):
         Backend.__init__(self)
@@ -127,8 +159,10 @@ class PickleBackend(Backend):
         self.__localPlayerByConnection = {}
         self.__deviceByConnection = {}
         self.__playerByLocalPlayerAndConnection = {}
+        self.__playerByAuthToken = {}
         self.__playerByDevice = {}
         self.__playerDisplayName = {}
+        self.__playerFriendCode = {}
         self.__dataPerPlayerAndGame = {}
         self.__dbPath = dbPath
 
@@ -144,9 +178,19 @@ class PickleBackend(Backend):
     def _findPlayerForDevice(self, localDeviceUUID):
         return self.__playerByDevice.get(localDeviceUUID, None)
 
+    def _findAuthenticatedPlayerForAuthToken(self, auth_token_type, auth_token):
+        return self.__playerByAuthToken.get((auth_token_type, auth_token), None)
+
+    def _authenticatePlayerForAuthToken(self, auth_token_type, auth_token, playerID):
+        self.__playerByAuthToken[(auth_token_type, auth_token)] = playerID
+
     def _createPlayerForDevice(self, localDeviceUUID):
+        displayName = self._createDisplayName()
+        friendCode = self._createFriendCode()
         playerID = uuid.uuid4()
         self.__playerByDevice[localDeviceUUID] = playerID
+        self.__playerDisplayName[playerID] = displayName
+        self.__playerFriendCode[playerID] = friendCode
         return playerID
 
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
@@ -187,6 +231,11 @@ class PickleBackend(Backend):
         if playerID is None:
             return None
         return self.__playerDisplayName[playerID]
+
+    def _getPlayerFriendCode(self, playerID):
+        if playerID is None:
+            return None
+        return self.__playerFriendCode[playerID]
 
     def reset(self):
         self.__gameByConnection = {}
@@ -248,7 +297,9 @@ class Sqlite3Backend(Backend):
         return result
 
     def _storeConnection(self, connectionUUID, gameUUID):
+        deleteQuery = 'DELETE FROM connection WHERE connection_uuid="%s" AND game_uuid="%s"' % (str(connectionUUID), str(gameUUID))
         selectQuery = 'INSERT OR REPLACE INTO connection (connection_uuid, game_uuid) VALUES ("%s", "%s")' % (str(connectionUUID), str(gameUUID))
+        self._executeQuery(deleteQuery)
         self._executeQuery(selectQuery)
 
     def _findGameByConnection(self, connectionUUID):
@@ -266,11 +317,36 @@ class Sqlite3Backend(Backend):
         return None
 
     def _findPlayerForDevice(self, localDeviceUUID):
+        selectQuery = 'SELECT player_id FROM player_by_device WHERE device_uuid="%s"' % str(localDeviceUUID)
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
         return None
 
+    def _findAuthenticatedPlayerForAuthToken(self, auth_token_type, auth_token):
+        selectQuery = 'SELECT player_id FROM authenticated_players WHERE auth_token_type="%s" AND auth_token="%s"' % (str(auth_token_type), str(auth_token))
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
+    def _authenticatePlayerForAuthToken(self, auth_token_type, auth_token, playerID):
+        if self.logging:
+            print("_authenticatePlayerForAuthToken(%s, %s, %i)" % (auth_token_type, auth_token, playerID))
+        assert(playerID is not None)
+        if playerID is None or auth_token_type is None or auth_token is None:
+            return False
+        insertQuery = 'INSERT OR REPLACE INTO authenticated_players VALUES (%i, "%s", "%s")' % (playerID, str(auth_token_type), str(auth_token))
+        self._executeQuery(insertQuery)
+        return True
+
     def _createPlayerForDevice(self, localDeviceUUID):
-        insertQuery = 'INSERT INTO player (display_name) VALUES ("none")'
+        displayName = self._createDisplayName()
+        friendCode = self._createFriendCode()
+        insertQuery = 'INSERT INTO player (display_name, friend_code) VALUES ("%s", "%s")' % (displayName, friendCode)
         playerID = self._executeQueryAndReturnRowId(insertQuery)
+        insertQuery = 'INSERT INTO player_by_device (device_uuid, player_id) VALUES ("%s", %i)' % (str(localDeviceUUID), playerID)
+        self._executeQuery(insertQuery)
         return playerID
 
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
@@ -279,7 +355,9 @@ class Sqlite3Backend(Backend):
             print("_storeLocalPlayerForConnection(%s, %s, %s):" % (str(playerID), localPlayerUUID, connectionUUID))
         if playerID is None or localPlayerUUID is None or connectionUUID is None:
             return False
+        deleteQuery = 'DELETE FROM local_player_by_connection WHERE connection_uuid="%s" AND local_player_uuid="%s"' % (str(connectionUUID), str(localPlayerUUID))
         insertQuery = 'INSERT OR REPLACE INTO local_player_by_connection VALUES ("%s", "%s", %i)' % (str(localPlayerUUID), str(connectionUUID), playerID)
+        self._executeQuery(deleteQuery)
         self._executeQuery(insertQuery)
         return True
 
@@ -328,16 +406,27 @@ class Sqlite3Backend(Backend):
             return result[0]
         return None
 
+    def _getPlayerFriendCode(self, playerID):
+        if playerID is None:
+            return None
+        selectQuery = 'SELECT friend_code FROM player WHERE player_id=%i' % (playerID)
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
     def open(self):
         import sqlite3
         self.__conn = sqlite3.connect(self.__dbPath)
         cur = self.__conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS connection (connection_id INTEGER PRIMARY KEY, connection_uuid TEXT, game_uuid TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player (player_id INTEGER PRIMARY KEY, display_name TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS player (player_id INTEGER PRIMARY KEY, display_name TEXT, friend_code TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS authenticated_players (player_id INTEGER, auth_token_type TEXT, auth_token TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS local_player_by_connection (local_player_uuid TEXT, connection_uuid TEXT, player_id INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_by_device (device_uuid text, player_id INTEGER)")
         cur.close()
 
     def close(self):
+        self.__conn.commit()
         self.__conn.close()
