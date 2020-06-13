@@ -67,6 +67,9 @@ class ServerInstance(object):
         friendCode = self.__db.getPlayerFriendCode(connection, localPlayer)
         return { "friendCode" : str(friendCode) }
 
+    def chat(self, handler):
+        return '''<html>Chat Client</html>'''
+
 class PickleServerInstance(ServerInstance):
     def __init__(self):
         dbPath = ".simple_http_server.pickle"
