@@ -20,6 +20,7 @@ import pathfix
 pathfix.fix_sys_path()
 
 import unittest
+import json
 from multiplay import backend
 
 class TestBackend(object):
@@ -111,24 +112,35 @@ class TestBackend(object):
         result = db.writePlayerData(conn, localPlayer, "testing")
         self.assertTrue(result)
         result = db.readPlayerData(conn, localPlayer)
-        self.assertEqual(result, "testing")
+        self.assertEqual(result, b"testing")
 
     def test_modifyPlayerData(self):
         db = self._db
         conn = self._connectFromDefaultAddress(db)
-        self.assertTrue(conn is not None)
         localPlayer = self._loginFromDefaultDevice(db, conn)
-        self.assertTrue(localPlayer is not None)
         result = db.writePlayerData(conn, localPlayer, "testing")
         self.assertTrue(result)
         result = db.readPlayerData(conn, localPlayer)
-        self.assertEqual(result, "testing")
-        result = result + "2"
-        self.assertEqual(result, "testing2")
-        result = db.writePlayerData(conn, localPlayer, result)
+        self.assertEqual(result, b"testing")
+        result = db.writePlayerData(conn, localPlayer, "testing2")
         self.assertTrue(result)
         result = db.readPlayerData(conn, localPlayer)
-        self.assertEqual(result, "testing2")
+        self.assertEqual(result, b"testing2")
+
+    def test_incrementPlayerScore(self):
+        db = self._db
+        conn = self._connectFromDefaultAddress(db)
+        localPlayer = self._loginFromDefaultDevice(db, conn)
+        playerData = { "score" : 0 }
+        db.writePlayerData(conn, localPlayer, json.dumps(playerData))
+        response = db.readPlayerData(conn, localPlayer)
+        data = json.loads(response)
+        score = int(data['score'])
+        data['score'] = str(score + 1)
+        db.writePlayerData(conn, localPlayer, json.dumps(data))
+        response = db.readPlayerData(conn, localPlayer)
+        data = json.loads(response)
+        self.assertEqual(1, int(data['score']))
 
     def test_setDisplayName(self):
         db = self._db
@@ -192,6 +204,14 @@ class TestBackend(object):
         localSession = db.createSession(conn, localPlayer)
         code = db.getSessionShareCode(conn, localSession)
         self.assertTrue(code is not None)
+
+    def test_readSessionData(self):
+        db = self._db
+        conn = self._connectFromDefaultAddress(db)
+        localPlayer = self._loginFromDefaultDevice(db, conn)
+        localSession = db.createSession(conn, localPlayer)
+        data = db.readSessionData(conn, localSession)
+        self.assertTrue(data is not None)
 
 class TestPickleBackend(unittest.TestCase, TestBackend):
     def __init__(self, *args):

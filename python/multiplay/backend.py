@@ -122,6 +122,14 @@ class Backend(object):
         gameUUID = self._findGameByConnection(connectionUUID)
         return self._loadPlayerData(playerID, gameUUID)
 
+    def readSessionData(self, connectionUUID, localSessionUUID):
+        if isinstance(localSessionUUID, str):
+            localSessionUUID = uuid.UUID(localSessionUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        sessionID = self._findSessionForLocalSessionAndConnection(localSessionUUID, connectionUUID)
+        return "" #FIXME
+
     def setPlayerDisplayName(self, connectionUUID, localPlayerUUID, name):
         if isinstance(localPlayerUUID, str):
             localPlayerUUID = uuid.UUID(localPlayerUUID)
@@ -328,6 +336,8 @@ class PickleBackend(Backend):
     def _storePlayerData(self, playerID, gameUUID, data):
         if playerID is None or gameUUID is None:
             return False
+        if not isinstance(data, bytes):
+            data = str(data).encode()
         self.__dataPerPlayerAndGame[(playerID, gameUUID)] = data
         return True
 
@@ -410,11 +420,14 @@ class Sqlite3Backend(Backend):
         Backend.__init__(self)
         self.__dbPath = dbPath
 
-    def _executeQuery(self, query):
+    def _executeQuery(self, query, *args):
         if self.logging:
             print(query)
         cur = self.__conn.cursor()
-        cur.execute(query)
+        if args:
+            cur.execute(query, args)
+        else:
+            cur.execute(query)
         cur.close()
 
     def _executeQueryAndFetchOne(self, query):
@@ -574,10 +587,12 @@ class Sqlite3Backend(Backend):
     def _storePlayerData(self, playerID, gameUUID, data):
         if playerID is None or gameUUID is None:
             return False
+        if not isinstance(data, bytes):
+            data = str(data).encode()
         deleteQuery = 'DELETE FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID))
-        insertQuery = 'INSERT INTO player_data (player_id, game_uuid, data) VALUES (%i, "%s", "%s")' % (playerID, str(gameUUID), str(data))
+        insertQuery = 'INSERT INTO player_data (player_id, game_uuid, data) VALUES (%i, "%s", ?)' % (playerID, str(gameUUID))
         self._executeQuery(deleteQuery)
-        self._executeQuery(insertQuery)
+        self._executeQuery(insertQuery, data)
         return True
 
     def _loadPlayerData(self, playerID, gameUUID):
@@ -654,13 +669,13 @@ class Sqlite3Backend(Backend):
         cur.execute("CREATE TABLE IF NOT EXISTS player (player_id INTEGER PRIMARY KEY, display_name TEXT, friend_code TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS authenticated_players (player_id INTEGER, auth_token_type TEXT, auth_token TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS local_player_by_connection (local_player_uuid TEXT, connection_uuid TEXT, player_id INTEGER)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data BLOB)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_friends (player_id INTEGER, friend_id INTEGER, alias TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_by_device (device_uuid text, player_id INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS session (session_id INTEGER PRIMARY KEY, game_uuid TEXT, display_name TEXT, creation_date DATE, expiry_date DATE, share_code TEXT, min_players INTEGER, max_players INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_by_session (session_id INTEGER, player_id INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS local_session_by_connection (local_session_uuid TEXT, connection_uuid TEXT, session_id INTEGER)")
-        cur.execute("CREATE TABLE IF NOT EXISTS session_data (session_id INTEGER, data TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS session_data (session_id INTEGER, data BLOB)")
         cur.close()
 
     def close(self):

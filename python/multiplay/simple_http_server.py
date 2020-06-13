@@ -151,9 +151,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 __httpd = None
 
 def run(port):
-    __serverInstanceClass = PickleServerInstance
-    if 'sqlite3' in sys.argv:
-        __serverInstanceClass = Sqlite3ServerInstance
+    __serverInstanceClass = Sqlite3ServerInstance
+    if 'pickle' in sys.argv:
+        __serverInstanceClass = PickleServerInstance
     RequestHandler.serverInstance = __serverInstanceClass()
 
     server_address = ('', port)
