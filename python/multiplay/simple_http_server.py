@@ -22,6 +22,7 @@ import uuid
 import urllib.parse
 import json
 import sys
+import os
 
 class ServerInstance(object):
     def __init__(self, db):
@@ -42,14 +43,29 @@ class ServerInstance(object):
         return { "localPlayerToken" : str(localPlayerUUID) }
 
     def writePlayerData(self, handler, connection, localPlayer, data):
-        print("WRITE PLAYER DATA '%s' for player %s on connection %s " % (str(data), localPlayer, connection))
+        print("WRITE PLAYER DATA '%s' FOR player %s ON connection %s " % (str(data), localPlayer, connection))
         success = self.__db.writePlayerData(connection, localPlayer, data)
         return { "status" : 1 if success else 0 }
 
     def readPlayerData(self, handler, connection, localPlayer):
-        print("READ PLAYER DATA for player %s on connection %s " % (localPlayer, connection))
+        print("READ PLAYER DATA FOR player %s ON connection %s " % (localPlayer, connection))
         data = self.__db.readPlayerData(connection, localPlayer)
         return { "data" : str(data) }
+
+    def writePlayerDisplayName(self, handler, connection, localPlayer, displayName):
+        print("WRITE displayName '%s' FOR player %s ON connection %s " % (displayName, localPlayer, connection))
+        success = self.__db.setPlayerDisplayName(connection, localPlayer, displayName)
+        return { "status" : 1 if success else 0 }
+
+    def readPlayerDisplayName(self, handler, connection, localPlayer):
+        print("READ displayName FOR player %s ON connection %s " % (localPlayer, connection))
+        displayName = self.__db.getPlayerDisplayName(connection, localPlayer)
+        return { "displayName" : str(displayName) }
+
+    def readPlayerFriendCode(self, handler, connection, localPlayer):
+        print("READ friendCode for player %s ON connection %s " % (localPlayer, connection))
+        friendCode = self.__db.getPlayerFriendCode(connection, localPlayer)
+        return { "friendCode" : str(friendCode) }
 
 class PickleServerInstance(ServerInstance):
     def __init__(self):
@@ -78,6 +94,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                     name = arg
                     value = ""
                 argumentValueByName[name] = urllib.parse.unquote_plus(value)
+        command, format = os.path.splitext(command)
+        if format:
+            argumentValueByName['response'] = format
         return command, argumentValueByName
 
     def _send_header(self, code, content_type):

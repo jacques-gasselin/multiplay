@@ -34,7 +34,7 @@ port = 12345
 
 def _get_json_server_response(command, args):
     argsStr = urllib.parse.urlencode(args)
-    r = urllib.request.urlopen("http://%s:%s/%s?%s" % (host, port, command, argsStr))
+    r = urllib.request.urlopen("http://%s:%s/%s.json?%s" % (host, port, command, argsStr))
     response = r.read()
     return json.loads(response.decode())
 
@@ -86,6 +86,22 @@ class TestServerConnection(unittest.TestCase):
         response = _get_json_server_response("readPlayerData", { 'connection' : connectionUUID, 'localPlayer' : localPlayerUUID})
         data = json.loads(response['data'])
         self.assertEqual(1, int(data['score']))
+
+    def test_writePlayerDisplayName(self):
+        connectionUUID = _get_json_server_response("connect", { 'game' : gameUUID })['connectionToken']
+        localPlayerUUID = _get_json_server_response("login", { 'connection' : connectionUUID, 'localDevice' : localDeviceUUID })['localPlayerToken']
+        displayName = _get_json_server_response("readPlayerDisplayName", { 'connection' : connectionUUID, 'localPlayer' : localPlayerUUID })['displayName']
+        self.assertTrue(displayName is not None)
+        result = _get_json_server_response("writePlayerDisplayName", { 'connection' : connectionUUID, 'localPlayer' : localPlayerUUID, 'displayName' : 'player 1' })['status']
+        self.assertTrue(result)
+        displayName = _get_json_server_response("readPlayerDisplayName", { 'connection' : connectionUUID, 'localPlayer' : localPlayerUUID })['displayName']
+        self.assertEqual(displayName, "player 1")
+
+    def test_readPlayerFriendCode(self):
+        connectionUUID = _get_json_server_response("connect", { 'game' : gameUUID })['connectionToken']
+        localPlayerUUID = _get_json_server_response("login", { 'connection' : connectionUUID, 'localDevice' : localDeviceUUID })['localPlayerToken']
+        friendCode = _get_json_server_response("readPlayerFriendCode", { 'connection' : connectionUUID, 'localPlayer' : localPlayerUUID })['friendCode']
+        self.assertTrue(friendCode is not None)
 
 if __name__ == '__main__':
 

@@ -150,6 +150,22 @@ class TestBackend(object):
         code = db.getPlayerFriendCode(conn, localPlayer)
         self.assertTrue(code is not None)
 
+    def test_addFriendCode(self):
+        db = self._db
+        conn = self._connectFromDefaultAddress(db)
+        localPlayer = self._loginFromDefaultDevice(db, conn)
+
+        conn2 = self._connectFromOtherAddress(db)
+        localPlayer2 = self._loginFromOtherDevice(db,conn2)
+        self.assertNotEqual(localPlayer, localPlayer2)
+
+        fc2 = db.getPlayerFriendCode(conn2, localPlayer2)
+        self.assertTrue(fc2 is not None)
+
+        status = db.addFriendToLocalPlayer(conn, localPlayer, fc2)
+        self.assertTrue(status)
+
+
     def test_createSession(self):
         db = self._db
         conn = self._connectFromDefaultAddress(db)

@@ -170,6 +170,15 @@ class Backend(object):
         sessionID = self._findSessionForLocalSessionAndConnection(localSessionUUID, connectionUUID)
         return self._getSessionShareCode(sessionID)
 
+    def addFriendToLocalPlayer(self, connectionUUID, localPlayerUUID, friendCode):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        friendID = self._findPlayerForFriendCode(friendCode)
+        return self._addFriendToPlayer(playerID, friendID)
+
     def authenticateLocalPlayer(self, connectionUUID, localPlayerUUID, auth_token_type, auth_token):
         if isinstance(localPlayerUUID, str):
             localPlayerUUID = uuid.UUID(localPlayerUUID)
@@ -213,6 +222,7 @@ class PickleBackend(Backend):
         self.__deviceByConnection = {}
         self.__playerByLocalPlayerAndConnection = {}
         self.__sessionByLocalSessionAndConnection = {}
+        self.__friendByPlayer = {}
         self.__playerByAuthToken = {}
         self.__playerByDevice = {}
         self.__playerDisplayName = {}
@@ -266,6 +276,34 @@ class PickleBackend(Backend):
     def _storeLocalSessionForConnection(self, sessionID, localSessionUUID, connectionUUID):
         self.__localSessionByConnection[connectionUUID] = localSessionUUID
         self.__sessionByLocalSessionAndConnection[(localSessionUUID, connectionUUID)] = sessionID
+
+    def _findPlayerForFriendCode(self, friendCode):
+        if self.logging:
+            print("_findPlayerForFriendCode(%s)" % (friendCode))
+        if friendCode is None:
+            return None
+        result = None
+        for playerID, code in self.__playerFriendCode.items():
+            if code == friendCode:
+                result = playerID
+                break
+        if self.logging:
+            print("-> ", result)
+        return result
+
+    def _findSessionForShareCode(self, shareCode):
+        if self.logging:
+            print("_findSessionForShareCode(%s)" % (shareCode))
+        if shareCode is None:
+            return None
+        result = None
+        for sessionID, code in self.__sessionShareCode.items():
+            if code == shareCode:
+                result = sessionID
+                break
+        if self.logging:
+            print("-> ", result)
+        return result
 
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
         if self.logging:
@@ -335,6 +373,12 @@ class PickleBackend(Backend):
         if sessionID is None:
             return None
         return self.__sessionShareCode[sessionID]
+
+    def _addFriendToPlayer(self, playerID, friendID):
+        if playerID is None or friendID is None:
+            return False
+        self.__friendByPlayer[playerID] = friendID
+        return True
 
     def reset(self):
         self.__gameByConnection = {}
@@ -481,6 +525,30 @@ class Sqlite3Backend(Backend):
         self._executeQuery(insertQuery)
         return True
 
+    def _findPlayerForFriendCode(self, friendCode):
+        if self.logging:
+            print("_findPlayerForFriendCode(%s)" % (friendCode))
+        if friendCode is None:
+            return None
+        result = None
+        selectQuery = 'SELECT player_id FROM player WHERE friend_code="%s"' % (str(friendCode))
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
+    def _findSessionForShareCode(self, shareCode):
+        if self.logging:
+            print("_findSessionForShareCode(%s)" % (shareCode))
+        if shareCode is None:
+            return None
+        result = None
+        selectQuery = 'SELECT session_id FROM session WHERE share_code="%s"' % (str(shareCode))
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
         if self.logging:
             print("_findPlayerForLocalPlayerAndConnection(%s, %s)" % (localPlayerUUID, connectionUUID))
@@ -571,6 +639,13 @@ class Sqlite3Backend(Backend):
             return result[0]
         return None
 
+    def _addFriendToPlayer(self, playerID, friendID):
+        if playerID is None or friendID is None:
+            return False
+        insertQuery = 'INSERT INTO player_friends (player_id, friend_id) VALUES (%i, %i)' % (playerID, friendID)
+        self._executeQuery(insertQuery)
+        return True
+
     def open(self):
         import sqlite3
         self.__conn = sqlite3.connect(self.__dbPath)
@@ -580,6 +655,7 @@ class Sqlite3Backend(Backend):
         cur.execute("CREATE TABLE IF NOT EXISTS authenticated_players (player_id INTEGER, auth_token_type TEXT, auth_token TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS local_player_by_connection (local_player_uuid TEXT, connection_uuid TEXT, player_id INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS player_friends (player_id INTEGER, friend_id INTEGER, alias TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_by_device (device_uuid text, player_id INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS session (session_id INTEGER PRIMARY KEY, game_uuid TEXT, display_name TEXT, creation_date DATE, expiry_date DATE, share_code TEXT, min_players INTEGER, max_players INTEGER)")
         cur.execute("CREATE TABLE IF NOT EXISTS player_by_session (session_id INTEGER, player_id INTEGER)")
