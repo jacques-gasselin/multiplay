@@ -614,7 +614,7 @@ class Sqlite3Backend(Backend):
         result = self._executeQueryAndFetchAll(selectQuery)
         if result:
             return [r[0] for r in result]
-        return None
+        return []
 
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
         if self.logging:
