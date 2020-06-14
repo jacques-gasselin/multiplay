@@ -159,6 +159,9 @@ class ServerInstance(object):
     def favicon(self, handler):
         return ""
 
+    def ico(self, handler):
+        return ""
+
 class PickleServerInstance(ServerInstance):
     def __init__(self):
         dbPath = ".simple_http_server.pickle"
