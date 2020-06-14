@@ -80,6 +80,9 @@ class ServerInstance(object):
         return { "sessions" : [str(s) for s in sessions] }
 
     def chat(self, handler, message="", submit="", channel=""):
+        addr = handler.server.server_address[0]
+        if addr == "0.0.0.0":
+            addr = "localhost"
         return '''
         <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
         <html xmlns="http://www.w3.org/1999/xhtml">
@@ -102,7 +105,7 @@ class ServerInstance(object):
                 <input type="submit" name="submit" value="send">
             </form>
             <script type="text/javascript">
-                let baseUrl = "http://localhost:12345/";
+                let baseUrl = "http://%s/";
                 // global scope
                 let gameUUID = "00000000-0000-0000-0000-000000000000";
                 // FIXME, get the device UUID from a session token
@@ -154,7 +157,7 @@ class ServerInstance(object):
             </script>
         </body>
         </html>
-        '''
+        ''' % (addr + ":" + str(handler.server.server_address[1]))
 
     def favicon(self, handler):
         return ""
