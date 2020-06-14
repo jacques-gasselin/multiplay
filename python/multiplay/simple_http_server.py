@@ -24,8 +24,6 @@ import json
 import sys
 import os
 
-#TODO https support
-
 class ServerInstance(object):
     def __init__(self, db):
         self.__db = db
@@ -69,15 +67,32 @@ class ServerInstance(object):
         friendCode = self.__db.getPlayerFriendCode(connection, localPlayer)
         return { "friendCode" : str(friendCode) }
 
-    def createsession(self, handler, connection, localPlayer):
-        print("CREATE session FOR player %s ON connection %s " % (localPlayer, connection))
-        localSessionUUID = self.__db.createSession(connection, localPlayer)
+    def listplayerfriends(self, handler, connection, localPlayer):
+        print("LIST friends for player %s ON connection %s " % (localPlayer, connection))
+        friendsAndNames = self.__db.listPlayerFriends(connection, localPlayer)
+        friends = [{ 'remotePlayerToken' : str(s), 'displayName' : n} for s, n in friendsAndNames]
+        return { "friends" : friends }
+
+    def createsession(self, handler, connection, localPlayer, displayName=None):
+        print("CREATE session '%s' FOR player %s ON connection %s " % (displayName if displayName else "<auto>", localPlayer, connection))
+        localSessionUUID = self.__db.createSession(connection, localPlayer, displayName)
         return { "localSessionToken" : str(localSessionUUID) }
+
+    def readsessiondisplayname(self, handler, connection, session):
+        print("READ displayName FOR session %s ON connection %s " % (session, connection))
+        displayName = self.__db.getSessionDisplayName(connection, session)
+        return { "displayName" : str(displayName) }
+
+    def writesessiondisplayname(self, handler, connection, session, displayName):
+        print("WRITE displayName '%s' FOR session %s ON connection %s " % (displayName, session, connection))
+        success = self.__db.setSessionDisplayName(connection, session, displayName)
+        return { "status" : 1 if success else 0 }
 
     def listplayersessions(self, handler, connection, localPlayer):
         print("LIST sessions for player %s ON connection %s " % (localPlayer, connection))
-        sessions = self.__db.listPlayerSessions(connection, localPlayer)
-        return { "sessions" : [str(s) for s in sessions] }
+        sessionsAndNames = self.__db.listPlayerSessions(connection, localPlayer)
+        sessions = [{ 'localSessionToken' : str(s), 'displayName' : n} for s, n in sessionsAndNames]
+        return { "sessions" : sessions }
 
     def chat(self, handler, message="", submit="", channel=""):
         return '''
@@ -91,9 +106,21 @@ class ServerInstance(object):
                 <p id="username">Not logged in</p>
                 <p id="friendcode">Not logged in</p>
             </div>
-            <p>Channels</p>
-            <ul id="channels">
-            </ul>
+            <div>
+                <div>
+                    <p>Channels</p>
+                    <button onclick="createChannel()">Create Channel</button>
+                    <button onclick="joinChannel()">Join Channel</button>
+                </div>
+                <ul id="channels">
+                </ul>
+            </div>
+            <div>
+                <p>Friends</p>
+                <button onclick="addFriend()">Add Friend</button>
+                <ul id="friends">
+                </ul>
+            </div>
             <div id="messages">
             </div>
             <form id="chat-form">
@@ -109,6 +136,72 @@ class ServerInstance(object):
                 let deviceUUID = "00000000-0000-0000-0000-000000000000";
                 let connection = "";
                 let localPlayer = "";
+                let localSession = "";
+                
+                let createSessionUrl = baseUrl + "createSession.json";
+                
+                function updateMessages() {
+                    let readSessionsDataUrl = baseUrl + "readSessionData.json?connection=" + connection + "&session=" + localSession;
+                    fetch(readSessionsDataUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        let messages = data.messages;
+                        let div = document.getElementById("messages");
+                        result = '';
+                        if (messages) {
+                            messages.forEach(m => result = result + '<p>' + m.sender + ': ' + m.message + '</p>');
+                        }
+                        div.innerHTML = result;
+                    });
+                }
+                
+                function updateChannels() {
+                    let listPlayerSessionsUrl = baseUrl + "listPlayerSessions.json?connection=" + connection + "&localPlayer=" + localPlayer;
+                    fetch(listPlayerSessionsUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        let channels = data.sessions;
+                        let ul = document.getElementById("channels");
+                        result = '';
+                        let chatUrl = baseUrl + "chat.html?channel=";
+                        channels.forEach(c => result = result + '<li><a href="' + chatUrl + c.localSessionToken + '">' + c.displayName + '</li>');
+                        ul.innerHTML = result;
+                    });
+                }
+                
+                function updateFriends() {
+                    let listPlayerFriendsUrl = baseUrl + "listPlayerFriends.json?connection=" + connection + "&localPlayer=" + localPlayer;
+                    fetch(listPlayerFriendsUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        let friends = data.friends;
+                        let ul = document.getElementById("friends");
+                        result = '';
+                        friends.forEach(f => result = result + '<li><a href="' + chatUrl + f.remotePlayerToken + '">' + f.displayName + '</li>');
+                        ul.innerHTML = result;
+                    });                            
+                }
+                
+                function createChannel() {
+                    let name = prompt("Channel name")
+                    let url = createSessionUrl + '&displayName=' + encodeURIComponent(name) 
+                    fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        session = data.localSessionToken;
+                        updateChannels();
+                        updateMessages();
+                    });
+                }
+
+                function joinChannel() {
+                    let code = prompt("Enter channel share code");                
+                }
+                
+                function addFriend() {
+                    let code = prompt("Enter friend code");                
+                }
+                
                 (function() {
                     let connectUrl = baseUrl + "connect.json?game=" + gameUUID;
                     fetch(connectUrl)
@@ -120,6 +213,7 @@ class ServerInstance(object):
                         .then(response => response.json())
                         .then(data => { 
                             localPlayer = data.localPlayerToken;
+                            createSessionUrl = baseUrl + "createSession.json?connection=" + connection + "&localPlayer=" + localPlayer;
                             let displayNameUrl = baseUrl + "readPlayerDisplayName.json?connection=" + connection + "&localPlayer=" + localPlayer;
                             fetch(displayNameUrl)
                             .then(response => response.json())
@@ -136,18 +230,8 @@ class ServerInstance(object):
                                 let p = document.getElementById("friendcode");
                                 p.innerHTML = "Friend code : " + code;
                             });
-                            let listPlayerSessionsUrl = baseUrl + "listPlayerSessions.json?connection=" + connection + "&localPlayer=" + localPlayer;
-                            fetch(listPlayerSessionsUrl)
-                            .then(response => response.json())
-                            .then(data => {
-                                let channels = data.sessions;
-                                let ul = document.getElementById("channels");
-                                let createSessionUrl = baseUrl + "createSession.json?connection=" + connection + "&localPlayer=" + localPlayer;
-                                result = '<li><a href="' + createSessionUrl + '">Create New Channel</a></li>';
-                                let chatUrl = baseUrl + "chat.html?channel=";
-                                channels.forEach(c => result = result + '<li><a href="' + chatUrl + c + '">' + c + '</li>');
-                                ul.innerHTML = result;
-                            });
+                            updateChannels();
+                            updateFriends();
                         });
                     });
                 })();                
@@ -207,6 +291,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self._send_header(200, "application/json")
         self.wfile.write(("%s\n" % json.dumps(response)).encode())
 
+    def _GET_ico(self, response):
+        self._send_header(200, "image/x-icon")
+        self.wfile.write(response.encode())
+
     def _GET_html(self, response):
         self._send_header(200, "text/html")
         self.wfile.write(response.encode())
@@ -228,7 +316,11 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             return
         format = argumentValueByName.pop("response", "json")
         instance = RequestHandler.serverInstance
-        func = getattr(instance, command[1:])
+        try:
+            func = getattr(instance, command[1:])
+        except AttributeError as e:
+            self._respond_error(400, e, format)
+            return
         try:
             response = func(self, **argumentValueByName)
             print("-> ", response)
@@ -250,7 +342,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
 __httpd = None
 
-def run(port):
+def run(port, useSSL = False):
     __serverInstanceClass = Sqlite3ServerInstance
     if 'pickle' in sys.argv:
         __serverInstanceClass = PickleServerInstance
@@ -260,6 +352,13 @@ def run(port):
     try:
         with http.server.HTTPServer(server_address, RequestHandler) as httpd:
             global __httpd
+            if useSSL:
+                import ssl
+                #openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
+                httpd.socket = ssl.wrap_socket (httpd.socket,
+                    keyfile=os.path.expanduser('~/.ssh/multiplay-server-key.pem'),
+                    certfile=os.path.expanduser('~/.ssh/multiplay-server-cert.pem'),
+                    server_side=True)
             __httpd = httpd
             print("serving at ", httpd.server_address)
             httpd.serve_forever()
@@ -284,7 +383,10 @@ def shutdown():
 
 if __name__ == "__main__":
     port = 12345
+    useSSL = False
     for i, arg in enumerate(sys.argv):
         if arg == '-p' or arg == '--port':
             port = int(sys.argv[i + 1])
-    run(port)
+        if arg == '--https':
+            useSSL = True
+    run(port, useSSL)
