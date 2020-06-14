@@ -18,6 +18,8 @@
 import uuid
 import random
 
+#TODO hierachial games as domains.
+
 class Backend(object):
     def __init__(self):
         self.__isLogging = False
@@ -221,6 +223,21 @@ class Backend(object):
         self._storeLocalSessionForConnection(sessionID, localSessionUUID, connectionUUID)
         return localSessionUUID
 
+    def listPlayerSessions(self, connectionUUID, localPlayerUUID):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        gameUUID = self._findGameByConnection(connectionUUID)
+        sessions = self._findSessionsForPlayerAndGame(playerID, gameUUID)
+        result = []
+        for sessionID in sessions:
+            localSessionUUID = uuid.uuid5(localPlayerUUID, str(sessionID))
+            self._storeLocalSessionForConnection(sessionID, localSessionUUID, connectionUUID)
+            result.append(localSessionUUID)
+        return result
+
 class PickleBackend(Backend):
     def __init__(self, dbPath):
         Backend.__init__(self)
@@ -239,6 +256,7 @@ class PickleBackend(Backend):
         self.__sessionByGame = {}
         self.__sessionDisplayName = {}
         self.__sessionShareCode = {}
+        self.__playersBySession = {}
         self.__dbPath = dbPath
 
     def _storeConnection(self, connectionUUID, gameUUID):
@@ -275,6 +293,7 @@ class PickleBackend(Backend):
         self.__sessionByGame[gameUUID] = sessionID
         self.__sessionDisplayName[sessionID] = displayName
         self.__sessionShareCode[sessionID] = shareCode
+        self.__playersBySession[sessionID] = [playerID]
         return sessionID
 
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
@@ -309,6 +328,19 @@ class PickleBackend(Backend):
             if code == shareCode:
                 result = sessionID
                 break
+        if self.logging:
+            print("-> ", result)
+        return result
+
+    def _findSessionsForPlayerAndGame(self, playerID, gameUUID):
+        if self.logging:
+            print("_findSessionsForPlayerAndGame(%s, %s)" % (playerID, gameUUID))
+        if playerID is None or gameUUID is None:
+            return []
+        result = []
+        for session in self.__sessionByGame[gameUUID]:
+            if playerID in self.__playersBySession[session]:
+                result.append(session)
         if self.logging:
             print("-> ", result)
         return result
@@ -441,6 +473,17 @@ class Sqlite3Backend(Backend):
         cur.close()
         return result
 
+    def _executeQueryAndFetchAll(self, query):
+        if self.logging:
+            print(query)
+        cur = self.__conn.cursor()
+        cur.execute(query)
+        result = cur.fetchall()
+        if self.logging:
+            print(result)
+        cur.close()
+        return result
+
     def _executeQueryAndReturnRowId(self, query):
         if self.logging:
             print(query)
@@ -560,6 +603,17 @@ class Sqlite3Backend(Backend):
         result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
+        return None
+
+    def _findSessionsForPlayerAndGame(self, playerID, gameUUID):
+        if self.logging:
+            print("_findSessionsForPlayerAndGame(%s, %s)" % (playerID, gameUUID))
+        if playerID is None or gameUUID is None:
+            return []
+        selectQuery = 'SELECT session_id FROM player_by_session WHERE player_id="%i" AND session_id IN (SELECT session_id FROM session WHERE game_uuid="%s")' % (playerID, str(gameUUID))
+        result = self._executeQueryAndFetchAll(selectQuery)
+        if result:
+            return [r[0] for r in result]
         return None
 
     def _findPlayerForLocalPlayerAndConnection(self, localPlayerUUID, connectionUUID):
