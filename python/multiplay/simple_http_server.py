@@ -94,152 +94,6 @@ class ServerInstance(object):
         sessions = [{ 'localSessionToken' : str(s), 'displayName' : n} for s, n in sessionsAndNames]
         return { "sessions" : sessions }
 
-    def chat(self, handler, message="", submit="", channel=""):
-        return '''
-        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-        <html xmlns="http://www.w3.org/1999/xhtml">
-        <header>
-            <title>Multiplay Chat Client</title>
-        </header>
-        <body>
-            <div id="user">
-                <p id="username">Not logged in</p>
-                <p id="friendcode">Not logged in</p>
-            </div>
-            <div>
-                <div>
-                    <p>Channels</p>
-                    <button onclick="createChannel()">Create Channel</button>
-                    <button onclick="joinChannel()">Join Channel</button>
-                </div>
-                <ul id="channels">
-                </ul>
-            </div>
-            <div>
-                <p>Friends</p>
-                <button onclick="addFriend()">Add Friend</button>
-                <ul id="friends">
-                </ul>
-            </div>
-            <div id="messages">
-            </div>
-            <form id="chat-form">
-                <input type="text" name="message">
-                <input type="hidden" name="channel" id="channel">
-                <input type="submit" name="submit" value="send">
-            </form>
-            <script type="text/javascript">
-                let baseUrl = window.location.protocol + '//' + window.location.hostname + ':12345/';
-                // global scope
-                let gameUUID = "00000000-0000-0000-0000-000000000000";
-                // FIXME, get the device UUID from a session token
-                let deviceUUID = "00000000-0000-0000-0000-000000000000";
-                let connection = "";
-                let localPlayer = "";
-                let localSession = "";
-                
-                let createSessionUrl = baseUrl + "createSession.json";
-                
-                function updateMessages() {
-                    let readSessionsDataUrl = baseUrl + "readSessionData.json?connection=" + connection + "&session=" + localSession;
-                    fetch(readSessionsDataUrl)
-                    .then(response => response.json())
-                    .then(data => {
-                        let messages = data.messages;
-                        let div = document.getElementById("messages");
-                        result = '';
-                        if (messages) {
-                            messages.forEach(m => result = result + '<p>' + m.sender + ': ' + m.message + '</p>');
-                        }
-                        div.innerHTML = result;
-                    });
-                }
-                
-                function updateChannels() {
-                    let listPlayerSessionsUrl = baseUrl + "listPlayerSessions.json?connection=" + connection + "&localPlayer=" + localPlayer;
-                    fetch(listPlayerSessionsUrl)
-                    .then(response => response.json())
-                    .then(data => {
-                        let channels = data.sessions;
-                        let ul = document.getElementById("channels");
-                        result = '';
-                        let chatUrl = baseUrl + "chat.html?channel=";
-                        channels.forEach(c => result = result + '<li><a href="' + chatUrl + c.localSessionToken + '">' + c.displayName + '</li>');
-                        ul.innerHTML = result;
-                    });
-                }
-                
-                function updateFriends() {
-                    let listPlayerFriendsUrl = baseUrl + "listPlayerFriends.json?connection=" + connection + "&localPlayer=" + localPlayer;
-                    fetch(listPlayerFriendsUrl)
-                    .then(response => response.json())
-                    .then(data => {
-                        let friends = data.friends;
-                        let ul = document.getElementById("friends");
-                        result = '';
-                        friends.forEach(f => result = result + '<li><a href="' + chatUrl + f.remotePlayerToken + '">' + f.displayName + '</li>');
-                        ul.innerHTML = result;
-                    });                            
-                }
-                
-                function createChannel() {
-                    let name = prompt("Channel name")
-                    let url = createSessionUrl + '&displayName=' + encodeURIComponent(name) 
-                    fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        session = data.localSessionToken;
-                        updateChannels();
-                        updateMessages();
-                    });
-                }
-
-                function joinChannel() {
-                    let code = prompt("Enter channel share code");                
-                }
-                
-                function addFriend() {
-                    let code = prompt("Enter friend code");                
-                }
-                
-                (function() {
-                    let connectUrl = baseUrl + "connect.json?game=" + gameUUID;
-                    fetch(connectUrl)
-                    .then(response => response.json())
-                    .then(data => {
-                        connection = data.connectionToken;
-                        let loginUrl = baseUrl + "login.json?connection=" + connection + "&localDevice=" + deviceUUID;
-                        fetch(loginUrl)
-                        .then(response => response.json())
-                        .then(data => { 
-                            localPlayer = data.localPlayerToken;
-                            createSessionUrl = baseUrl + "createSession.json?connection=" + connection + "&localPlayer=" + localPlayer;
-                            let displayNameUrl = baseUrl + "readPlayerDisplayName.json?connection=" + connection + "&localPlayer=" + localPlayer;
-                            fetch(displayNameUrl)
-                            .then(response => response.json())
-                            .then(data => {
-                                let name = data.displayName;
-                                let p = document.getElementById("username");
-                                p.innerHTML = "Signed in as " + name;
-                            });
-                            let friendCodeUrl = baseUrl + "readPlayerFriendCode.json?connection=" + connection + "&localPlayer=" + localPlayer;
-                            fetch(friendCodeUrl)
-                            .then(response => response.json())
-                            .then(data => {
-                                let code = data.friendCode;
-                                let p = document.getElementById("friendcode");
-                                p.innerHTML = "Friend code : " + code;
-                            });
-                            updateChannels();
-                            updateFriends();
-                        });
-                    });
-                })();                
-            </script>
-        </body>
-        </html>
-        '''
-
     def favicon(self, handler):
         return ""
 
@@ -291,10 +145,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self._send_header(200, "application/json")
         self.wfile.write(("%s\n" % json.dumps(response)).encode())
 
-    def _GET_ico(self, response):
-        self._send_header(200, "image/x-icon")
-        self.wfile.write(response.encode())
-
     def _GET_html(self, response):
         self._send_header(200, "text/html")
         self.wfile.write(response.encode())
@@ -306,6 +156,37 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         else:
             self._send_header(code, "text/html")
             self.wfile.write(('error=%s\n' % str(error)).encode())
+
+    def _GET_www_resource(self):
+        rootPath = self.server.site_root_path
+        if '?' in self.path:
+            path, argumentString = self.path.split("?")
+        else:
+            path = self.path
+            argumentString = ""
+        # path has a prefix of / which would fail os.path.join
+        filePath = os.path.join(rootPath, path[1:])
+        try:
+            with open(filePath, "rb") as f:
+                data = f.read()
+                self.send_response(200)
+                if path.endswith(".html"):
+                    self.send_header("Content-type", "text/html")
+                elif path.endswith(".css"):
+                    self.send_header("Content-type", "text/css")
+                elif path.endswith(".js"):
+                    self.send_header("Content-type", "application/javascript")
+                elif path.endswith(".png"):
+                    self.send_header("Content-type", "image/png")
+                elif path.endswith(".ico"):
+                    self.send_header("Content-type", "image/x-icon")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+        except FileNotFoundError as e:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(str(e).encode())
 
     def do_GET(self):
         print("GET")
@@ -319,7 +200,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         try:
             func = getattr(instance, command[1:])
         except AttributeError as e:
-            self._respond_error(400, e, format)
+            self._GET_www_resource()
             return
         try:
             response = func(self, **argumentValueByName)
@@ -361,6 +242,9 @@ def run(port, useSSL = False):
                     server_side=True)
             __httpd = httpd
             print("serving at ", httpd.server_address)
+            currentFilePath = os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
+            httpd.site_root_path = os.path.realpath(os.path.join(currentFilePath, '..', '..', '..', 'www'))
+            print("loading resources from ", httpd.site_root_path)
             httpd.serve_forever()
     except:
         if RequestHandler.serverInstance:

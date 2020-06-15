@@ -1,0 +1,15 @@
+.flex {
+  display: flex;
+}
+
+.item {
+  margin: 10px;
+}
+
+.left {
+  width: 25%;
+}
+
+.right {
+  width: 75%;
+}

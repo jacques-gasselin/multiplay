@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Multiplay Chat Client</title>
+        <link rel="stylesheet" href="chat.css">
+        <script src="chat.js"></script>
+    </head>
+    <body onload="load()">
+        <div id="user" class="flex">
+            <p id="username" class="item">Not logged in</p>
+            <p id="friendcode" class="item">Not logged in</p>
+        </div>
+        <div>
+            <div class="flex">
+                <p class="item">Channels</p>
+                <button onclick="createChannel()">Create Channel</button>
+                <button onclick="joinChannel()">Join Channel</button>
+            </div>
+            <ul id="channels">
+            </ul>
+            <div class="flex">
+                <p class="item">Friends</p>
+                <button onclick="addFriend()">Add Friend</button>
+            </div>
+            <ul id="friends">
+            </ul>
+        </div>
+        <div class="right">
+            <div id="messages">
+            </div>
+            <div class="flex">
+                <form id="chat-form">
+                    <input type="text" name="message">
+                    <input type="hidden" name="channel" id="channel">
+                </form>
+                <button onclick="send()">Send</button>
+            </div>
+        </div>
+    </body>
+</html>

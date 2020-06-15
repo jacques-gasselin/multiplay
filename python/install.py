@@ -21,7 +21,6 @@ import sys
 import os
 
 serverScriptPath = os.path.realpath(os.path.join(os.path.curdir, 'multiplay', 'simple_http_server.py'))
-print(serverScriptPath)
 
 service = '''
 [Unit]
