@@ -1,4 +1,5 @@
 let baseUrl = window.location.protocol + '//' + window.location.hostname + ':12345/';
+
 // global scope
 let gameUUID = "00000000-0000-0000-0000-000000000000";
 // FIXME, get the device UUID from a session token
@@ -9,6 +10,12 @@ let localSession = "";
 let displayName = "";
 
 let createSessionUrl = baseUrl + "createSession.json";
+
+let queryString = window.location.search;
+let urlParams = new URLSearchParams(queryString);
+if (urlParams.has('channel')) {
+    localSession = urlParams.get('channel');
+}
 
 function updateMessages() {
     if (!localSession) {
