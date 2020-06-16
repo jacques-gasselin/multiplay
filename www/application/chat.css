@@ -14,8 +14,13 @@
 
 .right {
   position: fixed;
+  overflow: auto;
   right: 0;
   width: 75%;
+  height: 90%;
+}
+
+.messages {
 }
 
 .button-small {

@@ -44,4 +44,5 @@ with open("/lib/systemd/system/multiplay.service", "wb") as f:
     f.flush()
 os.system('systemctl daemon-reload')
 os.system('systemctl enable multiplay.service')
+os.system('systemctl stop multiplay.service')
 os.system('systemctl start multiplay.service')
