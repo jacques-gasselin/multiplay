@@ -115,6 +115,14 @@ class Backend(object):
         gameUUID = self._findGameByConnection(connectionUUID)
         return self._storePlayerData(playerID, gameUUID, data)
 
+    def writeSessionData(self, connectionUUID, localSessionUUID, data):
+        if isinstance(localSessionUUID, str):
+            localSessionUUID = uuid.UUID(localSessionUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        sessionID = self._findSessionForLocalSessionAndConnection(localSessionUUID, connectionUUID)
+        return self._storeSessionData(sessionID, data)
+
     def readPlayerData(self, connectionUUID, localPlayerUUID):
         if isinstance(localPlayerUUID, str):
             localPlayerUUID = uuid.UUID(localPlayerUUID)
@@ -130,7 +138,8 @@ class Backend(object):
         if isinstance(connectionUUID, str):
             connectionUUID = uuid.UUID(connectionUUID)
         sessionID = self._findSessionForLocalSessionAndConnection(localSessionUUID, connectionUUID)
-        return "" #FIXME
+        data = self._loadSessionData(sessionID)
+        return data
 
     def setPlayerDisplayName(self, connectionUUID, localPlayerUUID, name):
         if isinstance(localPlayerUUID, str):
@@ -696,10 +705,30 @@ class Sqlite3Backend(Backend):
         self._executeQuery(insertQuery, data)
         return True
 
+    def _storeSessionData(self, sessionID, data):
+        if sessionID is None:
+            return False
+        if not isinstance(data, bytes):
+            data = str(data).encode()
+        deleteQuery = 'DELETE FROM session_data WHERE session_id=%i' % (sessionID)
+        insertQuery = 'INSERT INTO session_data (session_id, data) VALUES (%i, ?)' % (sessionID)
+        self._executeQuery(deleteQuery)
+        self._executeQuery(insertQuery, data)
+        return True
+
     def _loadPlayerData(self, playerID, gameUUID):
         if playerID is None or gameUUID is None:
             return None
         selectQuery = 'SELECT data FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID))
+        result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0]
+        return None
+
+    def _loadSessionData(self, sessionID):
+        if sessionID is None:
+            return None
+        selectQuery = 'SELECT data FROM session_data WHERE session_id=%i' % (sessionID)
         result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]

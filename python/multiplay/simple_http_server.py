@@ -45,12 +45,12 @@ class ServerInstance(object):
     def writeplayerdata(self, handler, connection, localPlayer, data):
         print("WRITE PLAYER DATA '%s' FOR player %s ON connection %s " % (str(data), localPlayer, connection))
         success = self.__db.writePlayerData(connection, localPlayer, data)
-        return { "status" : 1 if success else 0 }
+        return "1".encode() if success else "0".encode()
 
     def readplayerdata(self, handler, connection, localPlayer):
         print("READ PLAYER DATA FOR player %s ON connection %s " % (localPlayer, connection))
         data = self.__db.readPlayerData(connection, localPlayer)
-        return { "data" : str(data) }
+        return data
 
     def writeplayerdisplayname(self, handler, connection, localPlayer, displayName):
         print("WRITE displayName '%s' FOR player %s ON connection %s " % (displayName, localPlayer, connection))
@@ -78,6 +78,16 @@ class ServerInstance(object):
         localSessionUUID = self.__db.createSession(connection, localPlayer, displayName)
         return { "localSessionToken" : str(localSessionUUID) }
 
+    def writesessiondata(self, handler, connection, session, data):
+        print("WRITE SESSION DATA '%s' FOR session %s ON connection %s " % (str(data), session, connection))
+        success = self.__db.writeSessionData(connection, session, data)
+        return "1".encode() if success else "0".encode()
+
+    def readsessiondata(self, handler, connection, session):
+        print("READ SESSION DATA FOR session %s ON connection %s " % (session, connection))
+        data = self.__db.readSessionData(connection, session)
+        return data
+
     def readsessiondisplayname(self, handler, connection, session):
         print("READ displayName FOR session %s ON connection %s " % (session, connection))
         displayName = self.__db.getSessionDisplayName(connection, session)
@@ -93,12 +103,6 @@ class ServerInstance(object):
         sessionsAndNames = self.__db.listPlayerSessions(connection, localPlayer)
         sessions = [{ 'localSessionToken' : str(s), 'displayName' : n} for s, n in sessionsAndNames]
         return { "sessions" : sessions }
-
-    def favicon(self, handler):
-        return ""
-
-    def ico(self, handler):
-        return ""
 
 class PickleServerInstance(ServerInstance):
     def __init__(self):
@@ -149,6 +153,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self._send_header(200, "text/html")
         self.wfile.write(response.encode())
 
+    def _GET_binary(self, response):
+        self._send_header(200, "application/octet-stream")
+        self.wfile.write(response)
+
     def _respond_error(self, code, error, format="json"):
         if format == "json":
             self._send_header(code, "application/json")
@@ -195,7 +203,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         except ValueError as e:
             self._respond_error(400, e)
             return
-        format = argumentValueByName.pop("response", "json")
+        format = argumentValueByName.pop("response", "binary")
         instance = RequestHandler.serverInstance
         try:
             func = getattr(instance, command[1:])
@@ -215,8 +223,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self._GET_html(response)
         elif format == "ico":
             self._GET_ico(response)
-        else:
+        elif format == "json":
             self._GET_json(response)
+        else:
+            self._GET_binary(response)
 
     def do_POST(self):
         print("POST")

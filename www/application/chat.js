@@ -6,21 +6,35 @@ let deviceUUID = "00000000-0000-0000-0000-000000000000";
 let connection = "";
 let localPlayer = "";
 let localSession = "";
+let displayName = "";
 
 let createSessionUrl = baseUrl + "createSession.json";
 
 function updateMessages() {
-    let readSessionsDataUrl = baseUrl + "readSessionData.json?connection=" + connection + "&session=" + localSession;
+    if (!localSession) {
+        return;
+    }
+    let readSessionsDataUrl = baseUrl + "readSessionData?connection=" + connection + "&session=" + localSession;
     fetch(readSessionsDataUrl)
-    .then(response => response.json())
-    .then(data => {
-        let messages = data.messages;
-        let div = document.getElementById("messages");
-        result = '';
-        if (messages) {
-            messages.forEach(m => result = result + '<p>' + m.sender + ': ' + m.message + '</p>');
+    .then(response => response.blob())
+    .then(blob => readBlobAsync(blob))
+    .then(blobText => {
+        if (blobText) {
+            var messages = []
+            try {
+                let data = JSON.parse(blobText);
+                messages = data.messages;
+            }
+            catch(err) {
+                console.log(err.message);
+            }
+            let div = document.getElementById("messages");
+            result = '';
+            if (messages) {
+                messages.forEach(m => result = result + '<p>' + m.sender + ': ' + m.message + '</p>');
+            }
+            div.innerHTML = result;
         }
-        div.innerHTML = result;
     });
 }
 
@@ -30,6 +44,10 @@ function updateChannels() {
     .then(response => response.json())
     .then(data => {
         let channels = data.sessions;
+        if (!localSession && channels) {
+            localSession = channels[0].localSessionToken;
+            updateMessages();
+        }
         let ul = document.getElementById("channels");
         result = '';
         let chatUrl = baseUrl + "chat.html?channel=";
@@ -71,21 +89,76 @@ function addFriend() {
     let code = prompt("Enter friend code");
 }
 
+function encodeStringToBytes(s) {
+    // FIXME use utf-8 conversion instead
+	var bytes = [];
+	for (var i = 0; i < s.length; i++) {
+		bytes[i] = s.charCodeAt(i);
+	}
+	return new Uint8Array(bytes);
+}
+
+async function readBlobAsync(blob) {
+  return new Promise((resolve, reject) => {
+    let reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+
+    reader.onerror = reject;
+
+    reader.readAsText(blob);
+  });
+}
+
 function send() {
     if (!localSession) {
         return;
     }
-    let readSessionsDataUrl = baseUrl + "readSessionData.json?connection=" + connection + "&session=" + localSession;
-    let writeSessionsDataUrl = baseUrl + "readSessionData.json?connection=" + connection + "&session=" + localSession;
+    let readSessionsDataUrl = baseUrl + "readSessionData?connection=" + connection + "&session=" + localSession;
     fetch(readSessionsDataUrl)
-    .then(response => response.json())
-    .then(data => {
-        let messages = data.messages;
+    .then(response => response.blob())
+    .then(blob => readBlobAsync(blob))
+    .then(blobText => {
+        var oldMessages = []
+        if (blobText) {
+            try {
+                let data = JSON.parse(blobText);
+                oldMessages = data.messages;
+            }
+            catch(err) {
+                console.log(err.message);
+            }
+        }
         // append form text as a message and write the data back
+        let textField = document.getElementById("message");
+        let newMessages = [{ 'sender' : displayName, 'message' : textField.value}];
+        textField.value = "";
+
+        let m = { 'messages' : oldMessages.concat(newMessages) };
+        let s = JSON.stringify(m);
+        let data = encodeStringToBytes(s);
+        let octets = new Blob(data, {type: "application/octet-stream"});
+        let octetsGETParam = encodeURIComponent(s);
+        let writeSessionsDataUrl = baseUrl + "writeSessionData?connection=" + connection + "&session=" + localSession + "&data=" + octetsGETParam;
+        fetch(writeSessionsDataUrl);
+        updateMessages();
     });
 }
 
+function keyOverrideEnterToSend(event) {
+    if (event.keyCode === 13) {
+        event.preventDefault();
+        send();
+    }
+}
+
 function load() {
+    // override 'Enter' to send.
+    document.getElementById("message").addEventListener("keyup", keyOverrideEnterToSend);
+    document.getElementById("message").addEventListener("keyup", keyOverrideEnterToSend);
+
     let connectUrl = baseUrl + "connect.json?game=" + gameUUID;
     fetch(connectUrl)
     .then(response => response.json())
@@ -101,9 +174,9 @@ function load() {
             fetch(displayNameUrl)
             .then(response => response.json())
             .then(data => {
-                let name = data.displayName;
+                displayName = data.displayName;
                 let p = document.getElementById("username");
-                p.innerHTML = "Signed in as " + name;
+                p.innerHTML = "Signed in as " + displayName;
             });
             let friendCodeUrl = baseUrl + "readPlayerFriendCode.json?connection=" + connection + "&localPlayer=" + localPlayer;
             fetch(friendCodeUrl)
@@ -115,6 +188,7 @@ function load() {
             });
             updateChannels();
             updateFriends();
+            updateMessages();
         });
     });
 }
