@@ -3,7 +3,6 @@ let baseUrl = window.location.protocol + '//' + window.location.hostname + ':123
 // global scope
 let gameUUID = "00000000-0000-0000-0000-000000000000";
 // FIXME, get the device UUID from a session token
-let deviceUUID = "00000000-0000-0000-0000-000000000000";
 let connection = "";
 let localPlayer = "";
 let localSession = "";
@@ -15,6 +14,46 @@ let queryString = window.location.search;
 let urlParams = new URLSearchParams(queryString);
 if (urlParams.has('channel')) {
     localSession = urlParams.get('channel');
+}
+
+function setCookie(cname, cvalue, exdays) {
+  var d = new Date();
+  d.setTime(d.getTime() + (exdays*24*60*60*1000));
+  var expires = "expires="+ d.toUTCString();
+  document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
+function getCookie(cname) {
+  var name = cname + "=";
+  var decodedCookie = decodeURIComponent(document.cookie);
+  var ca = decodedCookie.split(';');
+  for(var i = 0; i <ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) == 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
+}
+
+function randomHexString(n) {
+    let r = window.crypto.getRandomValues(new Uint8Array(n))
+    let c = Array.prototype.map.call(r, b => b.toString(16).padStart(2, "0"));
+    return c.join("");
+}
+
+var deviceUUID = getCookie('multiplay-device'); //"00000000-0000-0000-0000-000000000000";
+if (!deviceUUID) {
+    let a = randomHexString(4);
+    let b = randomHexString(2);
+    let c = randomHexString(2);
+    let d = randomHexString(2);
+    let e = randomHexString(6);
+    deviceUUID = [a, b, c, d, e].join("-");
+    setCookie('multiplay-device', deviceUUID, 30);
 }
 
 function updateMessages() {
