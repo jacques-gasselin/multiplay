@@ -78,6 +78,16 @@ class ServerInstance(object):
         localSessionUUID = self.__db.createSession(connection, localPlayer, displayName)
         return { "localSessionToken" : str(localSessionUUID) }
 
+    def joinsession(self, handler, connection, localPlayer, sessionCode):
+        print("JOIN session '%s' FOR player %s ON connection %s " % (sessionCode, localPlayer, connection))
+        localSessionUUID = self.__db.joinSession(connection, localPlayer, sessionCode)
+        return { "localSessionToken" : str(localSessionUUID) }
+
+    def leavesession(self, handler, connection, localPlayer, session):
+        print("LEAVE session '%s' FOR player %s ON connection %s " % (session, localPlayer, connection))
+        success = self.__db.leaveSession(connection, localPlayer, session)
+        return { "status" : 1 if success else 0 }
+
     def writesessiondata(self, handler, connection, session, data):
         print("WRITE SESSION DATA '%s' FOR session %s ON connection %s " % (str(data), session, connection))
         success = self.__db.writeSessionData(connection, session, data)
@@ -100,8 +110,8 @@ class ServerInstance(object):
 
     def listplayersessions(self, handler, connection, localPlayer):
         print("LIST sessions for player %s ON connection %s " % (localPlayer, connection))
-        sessionsAndNames = self.__db.listPlayerSessions(connection, localPlayer)
-        sessions = [{ 'localSessionToken' : str(s), 'displayName' : n} for s, n in sessionsAndNames]
+        sessionsNamesAndCodes = self.__db.listPlayerSessions(connection, localPlayer)
+        sessions = [{ 'localSessionToken' : str(s), 'displayName' : n, 'shareCode' : c } for s, n, c in sessionsNamesAndCodes]
         return { "sessions" : sessions }
 
 class PickleServerInstance(ServerInstance):

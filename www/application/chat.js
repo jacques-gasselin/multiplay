@@ -50,8 +50,13 @@ function updateChannels() {
         }
         let ul = document.getElementById("channels");
         result = '';
-        let chatUrl = baseUrl + "chat.html?channel=";
-        channels.forEach(c => result = result + '<li><a href="' + chatUrl + c.localSessionToken + '">' + c.displayName + '</li>');
+        let chatUrl = baseUrl + "application/chat.html?channel=";
+        channels.forEach(c => {
+            result = result
+             + '<li><a class="item" href="' + chatUrl + c.localSessionToken + '">' + c.shareCode + ': ' + c.displayName + '</a>'
+             + '<button class="button-small" onclick="leaveChannel(\'' + c.localSessionToken +'\')">Leave</button>'
+             + '</li>';
+        });
         ul.innerHTML = result;
     });
 }
@@ -83,10 +88,31 @@ function createChannel() {
 
 function joinChannel() {
     let code = prompt("Enter channel share code");
+    let url = baseUrl + "joinSession.json?connection=" + connection + "&localPlayer=" + localPlayer + "&sessionCode=" + code;
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        updateChannels();
+    });
+}
+
+function leaveChannel(c) {
+    let url = baseUrl + "leaveSession.json?connection=" + connection + "&localPlayer=" + localPlayer + "&session=" + c;
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        updateChannels();
+    });
 }
 
 function addFriend() {
     let code = prompt("Enter friend code");
+    let url = baseUrl + "addPlayerFriend.json?connection=" + connection + "&localPlayer=" + localPlayer + "&friendCode=" + code
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        updateFriends();
+    });
 }
 
 function encodeStringToBytes(s) {
