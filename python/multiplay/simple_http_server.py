@@ -67,6 +67,11 @@ class ServerInstance(object):
         friendCode = self.__db.getPlayerFriendCode(connection, localPlayer)
         return { "friendCode" : str(friendCode) }
 
+    def addplayerfriend(self, handler, connection, localPlayer, friendCode):
+        print("ADD friend with friendCode %s to player %s ON connection %s " % (friendCode, localPlayer, connection))
+        success = self.__db.addFriendToLocalPlayer(connection, localPlayer, friendCode)
+        return { "status" : 1 if success else 0 }
+
     def listplayerfriends(self, handler, connection, localPlayer):
         print("LIST friends for player %s ON connection %s " % (localPlayer, connection))
         friendsAndNames = self.__db.listPlayerFriends(connection, localPlayer)

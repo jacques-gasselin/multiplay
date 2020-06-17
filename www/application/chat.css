@@ -1,24 +1,49 @@
+body {
+    margin: 0px;
+    padding: 0px;
+}
+
+p {
+    margin-top: 3px;
+    margin-bottom: 4px;
+}
+
 .flex {
     display: flex;
 }
 
 .item {
     margin-left: 2px;
+    padding: 1px;
 }
 
 .top {
-    display: flex;
+    display: grid;
+    grid-template-rows: auto;
+    grid-template-columns: auto auto;
     left: 0;
     top: 0;
-    bottom: 50px;
+    margin: 0px;
+    max-height: 50px;
     width: 100%
 }
 
-.left {
-    position: fixed;
+.bottom {
+    display: grid;
+    grid-template-rows: auto;
+    grid-template-columns: 200px auto;
+    position: absolute;
     left: 0;
-    width: 25%;
-    height: 90%;
+    top: 30px;
+    bottom: 0px;
+    right: 0px;
+    margin: 0px;
+}
+
+.left {
+    left: 0;
+    min-width: 200px;
+    height: inherit;
     background-color: rgba(128, 5, 10, 1);
     color: white;
     font-smooth: always;
@@ -27,11 +52,8 @@
 }
 
 .right {
-    position: fixed;
     overflow: auto;
-    right: 0;
-    width: 75%;
-    height: 90%;
+    height: inherit;
     font-smooth: always;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -40,18 +62,27 @@
 .channels {
     list-style: none;
     margin-left: 5px;
+    padding-left: 5px;
 }
 
 .friends {
     list-style: none;
     margin-left: 5px;
+    padding-left: 5px;
 }
 
 .messages {
 }
 
+.message-input-div {
+    display: grid;
+    grid-template-rows: auto;
+    grid-template-columns: auto 70px;
+}
+
 .message-input {
-    width: 75%;
+    left: 0;
+    right: 0;
 }
 
 .button-small {
