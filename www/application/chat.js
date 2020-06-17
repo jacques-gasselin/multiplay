@@ -56,6 +56,9 @@ if (!deviceUUID) {
     setCookie('multiplay-device', deviceUUID, 30);
 }
 
+// update the messages every 10 seconds
+window.setInterval(updateMessages, 10000);
+
 function updateMessages() {
     if (!localSession) {
         return;
