@@ -99,7 +99,7 @@ function updateChannels() {
         let chatUrl = baseUrl + "application/chat.html?channel=";
         channels.forEach(c => {
             result = result
-             + '<li><a class="item" href="' + chatUrl + c.localSessionToken + '">' + c.shareCode + ': ' + c.displayName + '</a>'
+             + '<li>' + c.shareCode + ':<a class="item" href="' + chatUrl + c.localSessionToken + '">'+ c.displayName + '</a>'
              + '<button class="button-small" onclick="leaveChannel(\'' + c.localSessionToken +'\')">Leave</button>'
              + '</li>';
         });

@@ -561,33 +561,38 @@ class Sqlite3Backend(Backend):
     def _storeConnection(self, connectionUUID, gameUUID):
         deleteQuery = 'DELETE FROM connection WHERE connection_uuid="%s" AND game_uuid="%s"' % (str(connectionUUID), str(gameUUID))
         selectQuery = 'INSERT OR REPLACE INTO connection (connection_uuid, game_uuid) VALUES ("%s", "%s")' % (str(connectionUUID), str(gameUUID))
-        self._executeQuery(deleteQuery)
-        self._executeQuery(selectQuery)
+        with self.__lock:
+            self._executeQuery(deleteQuery)
+            self._executeQuery(selectQuery)
 
     def _findGameByConnection(self, connectionUUID):
         selectQuery = 'SELECT game_uuid FROM connection WHERE connection_uuid="%s"' % str(connectionUUID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
 
     def _findLocalPlayerForConnection(self, connectionUUID):
         selectQuery = 'SELECT local_player_uuid FROM local_player_by_connection WHERE connection_uuid="%s"' % str(connectionUUID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
 
     def _findPlayerForDevice(self, localDeviceUUID):
         selectQuery = 'SELECT player_id FROM player_by_device WHERE device_uuid="%s"' % str(localDeviceUUID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
 
     def _findAuthenticatedPlayerForAuthToken(self, auth_token_type, auth_token):
         selectQuery = 'SELECT player_id FROM authenticated_players WHERE auth_token_type="%s" AND auth_token="%s"' % (str(auth_token_type), str(auth_token))
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -599,7 +604,8 @@ class Sqlite3Backend(Backend):
         if playerID is None or auth_token_type is None or auth_token is None:
             return False
         insertQuery = 'INSERT OR REPLACE INTO authenticated_players VALUES (%i, "%s", "%s")' % (playerID, str(auth_token_type), str(auth_token))
-        self._executeQuery(insertQuery)
+        with self.__lock:
+            self._executeQuery(insertQuery)
         return True
 
     def _createPlayerForDevice(self, localDeviceUUID):
@@ -608,7 +614,8 @@ class Sqlite3Backend(Backend):
         insertQuery = 'INSERT INTO player (display_name, friend_code) VALUES ("%s", "%s")' % (displayName, friendCode)
         playerID = self._executeQueryAndReturnRowId(insertQuery)
         insertQuery = 'INSERT INTO player_by_device (device_uuid, player_id) VALUES ("%s", %i)' % (str(localDeviceUUID), playerID)
-        self._executeQuery(insertQuery)
+        with self.__lock:
+            self._executeQuery(insertQuery)
         return playerID
 
     def _createSession(self, gameUUID, playerID, displayName):
@@ -618,7 +625,8 @@ class Sqlite3Backend(Backend):
         insertQuery = 'INSERT INTO session (game_uuid, display_name, share_code, min_players, max_players) VALUES ("%s", "%s", "%s", 2, 16)' % (str(gameUUID), displayName, shareCode)
         sessionID = self._executeQueryAndReturnRowId(insertQuery)
         insertQuery = 'INSERT INTO player_by_session (session_id, player_id) VALUES (%i, %i)' % (sessionID, playerID)
-        self._executeQuery(insertQuery)
+        with self.__lock:
+            self._executeQuery(insertQuery)
         return sessionID
 
     def _storeLocalPlayerForConnection(self, playerID, localPlayerUUID, connectionUUID):
@@ -629,8 +637,9 @@ class Sqlite3Backend(Backend):
             return False
         deleteQuery = 'DELETE FROM local_player_by_connection WHERE connection_uuid="%s" AND local_player_uuid="%s"' % (str(connectionUUID), str(localPlayerUUID))
         insertQuery = 'INSERT OR REPLACE INTO local_player_by_connection VALUES ("%s", "%s", %i)' % (str(localPlayerUUID), str(connectionUUID), playerID)
-        self._executeQuery(deleteQuery)
-        self._executeQuery(insertQuery)
+        with self.__lock:
+            self._executeQuery(deleteQuery)
+            self._executeQuery(insertQuery)
         return True
 
     def _storeLocalSessionForConnection(self, sessionID, localSessionUUID, connectionUUID):
@@ -641,8 +650,9 @@ class Sqlite3Backend(Backend):
             return False
         deleteQuery = 'DELETE FROM local_session_by_connection WHERE connection_uuid="%s" AND local_session_uuid="%s"' % (str(connectionUUID), str(localSessionUUID))
         insertQuery = 'INSERT OR REPLACE INTO local_session_by_connection VALUES ("%s", "%s", %i)' % (str(localSessionUUID), str(connectionUUID), sessionID)
-        self._executeQuery(deleteQuery)
-        self._executeQuery(insertQuery)
+        with self.__lock:
+            self._executeQuery(deleteQuery)
+            self._executeQuery(insertQuery)
         return True
 
     def _findPlayerForFriendCode(self, friendCode):
@@ -652,7 +662,8 @@ class Sqlite3Backend(Backend):
             return None
         result = None
         selectQuery = 'SELECT player_id FROM player WHERE friend_code="%s"' % (str(friendCode))
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -664,7 +675,8 @@ class Sqlite3Backend(Backend):
             return None
         result = None
         selectQuery = 'SELECT session_id FROM session WHERE share_code="%s"' % (str(shareCode))
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -676,7 +688,8 @@ class Sqlite3Backend(Backend):
             return []
         # only return players that have also marked this player as their friend
         selectQuery = 'SELECT player_friends.friend_id, player.display_name FROM player_friends, player WHERE player.player_id=player_friends.player_id AND player_friends.player_id="%i" AND player_friends.friend_id IN (SELECT player_id FROM player_friends WHERE friend_id="%i")' % (playerID, playerID)
-        result = self._executeQueryAndFetchAll(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchAll(selectQuery)
         if result:
             return [r[:2] for r in result]
         return []
@@ -687,7 +700,8 @@ class Sqlite3Backend(Backend):
         if playerID is None or gameUUID is None:
             return []
         selectQuery = 'SELECT session_id, display_name, share_code FROM session WHERE game_uuid="%s" AND session_id IN (SELECT session_id FROM player_by_session WHERE player_id="%i")' % (str(gameUUID), playerID)
-        result = self._executeQueryAndFetchAll(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchAll(selectQuery)
         if result:
             return [r[:3] for r in result]
         return []
@@ -698,7 +712,8 @@ class Sqlite3Backend(Backend):
         if localPlayerUUID is None or connectionUUID is None:
             return None
         selectQuery = 'SELECT player_id FROM local_player_by_connection WHERE connection_uuid="%s" AND local_player_uuid="%s"' % (str(connectionUUID), str(localPlayerUUID))
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -709,7 +724,8 @@ class Sqlite3Backend(Backend):
         if localSessionUUID is None or connectionUUID is None:
             return None
         selectQuery = 'SELECT session_id FROM local_session_by_connection WHERE connection_uuid="%s" AND local_session_uuid="%s"' % (str(connectionUUID), str(localSessionUUID))
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -721,8 +737,9 @@ class Sqlite3Backend(Backend):
             data = str(data).encode()
         deleteQuery = 'DELETE FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID))
         insertQuery = 'INSERT INTO player_data (player_id, game_uuid, data) VALUES (%i, "%s", ?)' % (playerID, str(gameUUID))
-        self._executeQuery(deleteQuery)
-        self._executeQuery(insertQuery, data)
+        with self.__lock:
+            self._executeQuery(deleteQuery)
+            self._executeQuery(insertQuery, data)
         return True
 
     def _storeSessionData(self, sessionID, data):
@@ -732,15 +749,17 @@ class Sqlite3Backend(Backend):
             data = str(data).encode()
         deleteQuery = 'DELETE FROM session_data WHERE session_id=%i' % (sessionID)
         insertQuery = 'INSERT INTO session_data (session_id, data) VALUES (%i, ?)' % (sessionID)
-        self._executeQuery(deleteQuery)
-        self._executeQuery(insertQuery, data)
+        with self.__lock:
+            self._executeQuery(deleteQuery)
+            self._executeQuery(insertQuery, data)
         return True
 
     def _loadPlayerData(self, playerID, gameUUID):
         if playerID is None or gameUUID is None:
             return None
         selectQuery = 'SELECT data FROM player_data WHERE player_id=%i AND game_uuid="%s"' % (playerID, str(gameUUID))
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -749,7 +768,8 @@ class Sqlite3Backend(Backend):
         if sessionID is None:
             return None
         selectQuery = 'SELECT data FROM session_data WHERE session_id=%i' % (sessionID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -758,21 +778,24 @@ class Sqlite3Backend(Backend):
         if playerID is None or name is None:
             return False
         updateQuery = 'UPDATE player SET display_name="%s" WHERE player_id=%i' % (name, playerID)
-        self._executeQuery(updateQuery)
+        with self.__lock:
+            self._executeQuery(updateQuery)
         return True
 
     def _setSessionDisplayName(self, sessionID, name):
         if sessionID is None or name is None:
             return False
         updateQuery = 'UPDATE session SET display_name="%s" WHERE session_id=%i' % (name, sessionID)
-        self._executeQuery(updateQuery)
+        with self.__lock:
+            self._executeQuery(updateQuery)
         return True
 
     def _getPlayerDisplayName(self, playerID):
         if playerID is None:
             return None
         selectQuery = 'SELECT display_name FROM player WHERE player_id=%i' % (playerID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -781,7 +804,8 @@ class Sqlite3Backend(Backend):
         if sessionID is None:
             return None
         selectQuery = 'SELECT display_name FROM session WHERE session_id=%i' % (sessionID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -790,7 +814,8 @@ class Sqlite3Backend(Backend):
         if playerID is None:
             return None
         selectQuery = 'SELECT friend_code FROM player WHERE player_id=%i' % (playerID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -799,7 +824,8 @@ class Sqlite3Backend(Backend):
         if sessionID is None:
             return None
         selectQuery = 'SELECT share_code FROM session WHERE session_id=%i' % (sessionID)
-        result = self._executeQueryAndFetchOne(selectQuery)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
@@ -808,7 +834,8 @@ class Sqlite3Backend(Backend):
         if playerID is None or friendID is None:
             return False
         insertQuery = 'INSERT INTO player_friends (player_id, friend_id) VALUES (%i, %i)' % (playerID, friendID)
-        self._executeQuery(insertQuery)
+        with self.__lock:
+            self._executeQuery(insertQuery)
         return True
 
     def _addPlayerToSession(self, playerID, sessionID):
@@ -816,34 +843,40 @@ class Sqlite3Backend(Backend):
             return False
         deleteQuery = 'DELETE FROM player_by_session WHERE player_id=%i AND session_id=%i' % (playerID, sessionID)
         insertQuery = 'INSERT INTO player_by_session (session_id, player_id) VALUES (%i, %i)' % (sessionID, playerID)
-        self._executeQuery(deleteQuery)
-        self._executeQuery(insertQuery)
+        with self.__lock:
+            self._executeQuery(deleteQuery)
+            self._executeQuery(insertQuery)
         return True
 
     def _removePlayerFromSession(self, playerID, sessionID):
         if playerID is None or sessionID is None:
             return False
         deleteQuery = 'DELETE FROM player_by_session WHERE player_id=%i AND session_id=%i' % (playerID, sessionID)
-        self._executeQuery(deleteQuery)
+        with self.__lock:
+            self._executeQuery(deleteQuery)
         return True
 
     def open(self):
         import sqlite3
-        self.__conn = sqlite3.connect(self.__dbPath)
-        cur = self.__conn.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS connection (connection_id INTEGER PRIMARY KEY, connection_uuid TEXT, game_uuid TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player (player_id INTEGER PRIMARY KEY, display_name TEXT, friend_code TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS authenticated_players (player_id INTEGER, auth_token_type TEXT, auth_token TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS local_player_by_connection (local_player_uuid TEXT, connection_uuid TEXT, player_id INTEGER)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data BLOB)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player_friends (player_id INTEGER, friend_id INTEGER, alias TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player_by_device (device_uuid text, player_id INTEGER)")
-        cur.execute("CREATE TABLE IF NOT EXISTS session (session_id INTEGER PRIMARY KEY, game_uuid TEXT, display_name TEXT, creation_date DATE, expiry_date DATE, share_code TEXT, min_players INTEGER, max_players INTEGER)")
-        cur.execute("CREATE TABLE IF NOT EXISTS player_by_session (session_id INTEGER, player_id INTEGER)")
-        cur.execute("CREATE TABLE IF NOT EXISTS local_session_by_connection (local_session_uuid TEXT, connection_uuid TEXT, session_id INTEGER)")
-        cur.execute("CREATE TABLE IF NOT EXISTS session_data (session_id INTEGER, data BLOB)")
-        cur.close()
+        import threading
+        self.__lock = threading.Lock()
+        with self.__lock:
+            self.__conn = sqlite3.connect(self.__dbPath, check_same_thread = False)
+            cur = self.__conn.cursor()
+            cur.execute("CREATE TABLE IF NOT EXISTS connection (connection_id INTEGER PRIMARY KEY, connection_uuid TEXT, game_uuid TEXT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS player (player_id INTEGER PRIMARY KEY, display_name TEXT, friend_code TEXT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS authenticated_players (player_id INTEGER, auth_token_type TEXT, auth_token TEXT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS local_player_by_connection (local_player_uuid TEXT, connection_uuid TEXT, player_id INTEGER)")
+            cur.execute("CREATE TABLE IF NOT EXISTS player_data (player_id INTEGER, game_uuid TEXT, data BLOB)")
+            cur.execute("CREATE TABLE IF NOT EXISTS player_friends (player_id INTEGER, friend_id INTEGER, alias TEXT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS player_by_device (device_uuid text, player_id INTEGER)")
+            cur.execute("CREATE TABLE IF NOT EXISTS session (session_id INTEGER PRIMARY KEY, game_uuid TEXT, display_name TEXT, creation_date DATE, expiry_date DATE, share_code TEXT, min_players INTEGER, max_players INTEGER)")
+            cur.execute("CREATE TABLE IF NOT EXISTS player_by_session (session_id INTEGER, player_id INTEGER)")
+            cur.execute("CREATE TABLE IF NOT EXISTS local_session_by_connection (local_session_uuid TEXT, connection_uuid TEXT, session_id INTEGER)")
+            cur.execute("CREATE TABLE IF NOT EXISTS session_data (session_id INTEGER, data BLOB)")
+            cur.close()
 
     def close(self):
-        self.__conn.commit()
-        self.__conn.close()
+        with self.__lock:
+            self.__conn.commit()
+            self.__conn.close()

@@ -7,24 +7,24 @@
         <script src="chat.js"></script>
     </head>
     <body onload="load()">
-        <div id="user" class="flex">
+        <div id="user" class="top">
             <p id="username" class="item">Not logged in</p>
             <p id="friendcode" class="item">Not logged in</p>
         </div>
         <div>
             <div class="left">
                 <div class="flex">
-                    <p class="item">Channels</p>
+                    <p>Channels</p>
                     <button class="button-small" onclick="createChannel()">Create</button>
                     <button class="button-small" onclick="joinChannel()">Join</button>
                 </div>
-                <ul id="channels">
+                <ul id="channels" class="channels">
                 </ul>
                 <div class="flex">
                     <p class="item">Friends</p>
-                    <button onclick="addFriend()">Add</button>
+                    <button class="button-small" onclick="addFriend()">Add</button>
                 </div>
-                <ul id="friends">
+                <ul id="friends" class="friends">
                 </ul>
             </div>
             <div class="right">
@@ -32,7 +32,7 @@
                 </div>
                 <div>
                     <div class="flex">
-                        <input type="text" name="message" id="message">
+                        <input type="text" name="message" id="message" class="message-input">
                         <button onclick="send()">Send</button>
                     </div>
                 </div>

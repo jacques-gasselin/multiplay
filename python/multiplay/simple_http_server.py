@@ -251,7 +251,7 @@ def run(port, useSSL = False):
 
     server_address = ('', port)
     try:
-        with http.server.HTTPServer(server_address, RequestHandler) as httpd:
+        with http.server.ThreadingHTTPServer(server_address, RequestHandler) as httpd:
             global __httpd
             if useSSL:
                 import ssl
@@ -266,7 +266,7 @@ def run(port, useSSL = False):
             httpd.site_root_path = os.path.realpath(os.path.join(currentFilePath, '..', '..', '..', 'www'))
             print("loading resources from ", httpd.site_root_path)
             httpd.serve_forever()
-    except:
+    except Exception as e:
         if RequestHandler.serverInstance:
             RequestHandler.serverInstance.close()
 

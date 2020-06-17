@@ -1,29 +1,61 @@
 .flex {
-  display: flex;
+    display: flex;
 }
 
 .item {
-  margin: 10px;
+    margin-left: 2px;
+}
+
+.top {
+    display: flex;
+    left: 0;
+    top: 0;
+    bottom: 50px;
+    width: 100%
 }
 
 .left {
-  position: fixed;
-  left: 0;
-  width: 25%;
+    position: fixed;
+    left: 0;
+    width: 25%;
+    height: 90%;
+    background-color: rgba(128, 5, 10, 1);
+    color: white;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .right {
-  position: fixed;
-  overflow: auto;
-  right: 0;
-  width: 75%;
-  height: 90%;
+    position: fixed;
+    overflow: auto;
+    right: 0;
+    width: 75%;
+    height: 90%;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.channels {
+    list-style: none;
+    margin-left: 5px;
+}
+
+.friends {
+    list-style: none;
+    margin-left: 5px;
 }
 
 .messages {
 }
 
+.message-input {
+    width: 75%;
+}
+
 .button-small {
     font-size: 12px;
     padding: 1px 1px;
+    height: 32px;
 }
