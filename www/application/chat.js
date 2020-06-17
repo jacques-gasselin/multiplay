@@ -53,8 +53,8 @@ if (!deviceUUID) {
     let d = randomHexString(2);
     let e = randomHexString(6);
     deviceUUID = [a, b, c, d, e].join("-");
-    setCookie('multiplay-device', deviceUUID, 30);
 }
+setCookie('multiplay-device', deviceUUID, 30);
 
 // update the messages every 10 seconds
 window.setInterval(updateMessages, 10000);

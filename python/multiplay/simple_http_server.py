@@ -116,13 +116,15 @@ class ServerInstance(object):
 
 class PickleServerInstance(ServerInstance):
     def __init__(self):
-        dbPath = ".simple_http_server.pickle"
+        dbPath = os.path.expanduser("~/.multiplay-pickle.db")
+        print("loading backend from ", dbPath)
         from backend import PickleBackend as Backend
         ServerInstance.__init__(self, Backend(dbPath))
 
 class Sqlite3ServerInstance(ServerInstance):
     def __init__(self):
-        dbPath = ".simple_http_server.db"
+        dbPath = os.path.expanduser("~/.multiplay-sqlite3.db")
+        print("loading backend from ", dbPath)
         from backend import Sqlite3Backend as Backend
         ServerInstance.__init__(self, Backend(dbPath))
 
@@ -266,7 +268,11 @@ def run(port, useSSL = False):
             httpd.site_root_path = os.path.realpath(os.path.join(currentFilePath, '..', '..', '..', 'www'))
             print("loading resources from ", httpd.site_root_path)
             httpd.serve_forever()
+    except KeyboardInterrupt: # silly special cases that don't derive from Exception for common Unix ways to kill threads
+        pass
     except Exception as e:
+        print(e)
+    finally:
         if RequestHandler.serverInstance:
             RequestHandler.serverInstance.close()
 
