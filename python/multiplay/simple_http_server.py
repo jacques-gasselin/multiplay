@@ -157,29 +157,48 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             argumentValueByName['response'] = format[1:]
         return command.lower(), argumentValueByName
 
-    def _send_header(self, code, content_type):
-        self.send_response(code)
-        self.send_header("Content-type", content_type)
-        self.end_headers()
+    def _write_content(self, content):
+        if content:
+            if len(content) >= 128: # Pick some value for which gzip is worth it
+                if 'Accept-Encoding' in self.headers:
+                    if 'gzip' in self.headers['Accept-Encoding']:
+                        import gzip
+                        content = gzip.compress(content)
+                        self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Content-Length', str(len(content)))
+            # CORS support
+            self.send_header('Access-Control-Allow-Origin', "*")
+            self.end_headers()
+            self.wfile.write(content)
+        else:
+            self.end_headers()
 
     def _GET_json(self, response):
-        self._send_header(200, "application/json")
-        self.wfile.write(("%s\n" % json.dumps(response)).encode())
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        content = ("%s\n" % json.dumps(response)).encode()
+        self._write_content(content)
 
     def _GET_html(self, response):
-        self._send_header(200, "text/html")
-        self.wfile.write(response.encode())
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self._write_content(response.encode())
 
     def _GET_binary(self, response):
-        self._send_header(200, "application/octet-stream")
-        self.wfile.write(response)
+        self.send_response(200)
+        self.send_header("Content-type", "application/octet-stream")
+        self._write_content(response)
 
     def _respond_error(self, code, error, format="json"):
         if format == "json":
-            self._send_header(code, "application/json")
+            self.send_response(code)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
             self.wfile.write(('{ "error" : "%s" }\n' % str(error)).encode())
         else:
-            self._send_header(code, "text/html")
+            self.send_response(code)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
             self.wfile.write(('error=%s\n' % str(error)).encode())
 
     def _GET_www_resource(self):
@@ -205,9 +224,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                     self.send_header("Content-type", "image/png")
                 elif path.endswith(".ico"):
                     self.send_header("Content-type", "image/x-icon")
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
+                self._write_content(data)
         except FileNotFoundError as e:
             self.send_response(400)
             self.end_headers()
@@ -236,14 +253,19 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         except ValueError as e:
             self._respond_error(400, e, format)
             return
-        if format == "html":
-            self._GET_html(response)
-        elif format == "ico":
-            self._GET_ico(response)
-        elif format == "json":
-            self._GET_json(response)
-        else:
-            self._GET_binary(response)
+        try:
+            if format == "html":
+                self._GET_html(response)
+            elif format == "ico":
+                self._GET_ico(response)
+            elif format == "json":
+                self._GET_json(response)
+            else:
+                self._GET_binary(response)
+        except TypeError as e:
+            print(e)
+            self._respond_error(400, e, format)
+
 
     def do_POST(self):
         print("POST")
