@@ -1,4 +1,14 @@
-let baseUrl = window.location.protocol + '//' + window.location.hostname + ':12345/';
+var port = 12345;
+if (window.location.port) {
+    port = window.location.port;
+}
+else if (window.location.protocol == 'http:') {
+    port = 80;
+}
+else if (window.location.protocol == 'https:') {
+    port = 443;
+}
+let baseUrl = window.location.protocol + '//' + window.location.hostname + ':' + port + '/';
 
 // global scope
 let gameUUID = "00000000-0000-0000-0000-000000000000";
