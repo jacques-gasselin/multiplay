@@ -40,7 +40,9 @@ class ServerInstance(object):
     def login(self, handler, connection, localDevice):
         print("LOGIN connection %s on device %s " % (connection, localDevice))
         localPlayerUUID = self.__db.login(connection, localDevice)
-        return { "localPlayerToken" : str(localPlayerUUID) }
+        displayName = self.__db.getPlayerDisplayName(connection, localPlayerUUID)
+        friendCode = self.__db.getPlayerFriendCode(connection, localPlayerUUID)
+        return { "localPlayerToken" : str(localPlayerUUID), "displayName" : str(displayName), "friendCode" : str(friendCode) }
 
     def writeplayerdata(self, handler, connection, localPlayer, data):
         print("WRITE PLAYER DATA '%s' FOR player %s ON connection %s " % (str(data), localPlayer, connection))
@@ -81,12 +83,16 @@ class ServerInstance(object):
     def createsession(self, handler, connection, localPlayer, displayName=None):
         print("CREATE session '%s' FOR player %s ON connection %s " % (displayName if displayName else "<auto>", localPlayer, connection))
         localSessionUUID = self.__db.createSession(connection, localPlayer, displayName)
-        return { "localSessionToken" : str(localSessionUUID) }
+        displayName = self.__db.getSessionDisplayName(connection, localSessionUUID)
+        shareCode = self.__db.getSessionShareCode(connection, localSessionUUID)
+        return { "localSessionToken" : str(localSessionUUID), "displayName" : displayName, "shareCode" : shareCode  }
 
     def joinsession(self, handler, connection, localPlayer, sessionCode):
         print("JOIN session '%s' FOR player %s ON connection %s " % (sessionCode, localPlayer, connection))
         localSessionUUID = self.__db.joinSession(connection, localPlayer, sessionCode)
-        return { "localSessionToken" : str(localSessionUUID) }
+        displayName = self.__db.getSessionDisplayName(connection, localSessionUUID)
+        shareCode = self.__db.getSessionShareCode(connection, localSessionUUID)
+        return { "localSessionToken" : str(localSessionUUID), "displayName" : displayName, "shareCode" : shareCode  }
 
     def leavesession(self, handler, connection, localPlayer, session):
         print("LEAVE session '%s' FOR player %s ON connection %s " % (session, localPlayer, connection))
