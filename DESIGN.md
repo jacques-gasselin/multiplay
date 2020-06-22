@@ -56,16 +56,20 @@ Client Side:
 { "connectionToken" : UUID }
 ~~~
 
-   html
-~~~ html
-connectionToken=UUID
+   plist
+~~~ plist
+<dict>
+  <key>connectionToken</key>
+  <string>UUID</string>
+</dict>
 ~~~
 
 !!! note
-   All URL requests support an option argument *response*, which is either *html* or *json*.
-   html is assumed if the format is omitted.
+   All URL requests support an option argument *response* (encoded as the suffix of the endpoint),
+   which is either *plist* or *json*. If the format is omitted the type is assumed to be binary and
+   the response is pure bytes.
    
-   /connect?game=$gameUUID&response=(json|html)
+   /connect(.plist|.json)?game=$gameUUID
 
 
 
@@ -122,12 +126,23 @@ Client Side:
    
    json
 ~~~ json
-{ "localPlayerToken" : UUID }
+{
+  "localPlayerToken" : UUID,
+  "displayName" : String,
+  "friendCode" : String
+}
 ~~~
    
-   html
-~~~ html
-localPlayerToken=UUID
+   plist
+~~~ plist
+<dict>
+  <key>localPlayerToken</key>
+  <string></string>
+  <key>displayName</key>
+  <string></string>
+  <key>friendCode</key>
+  <string></string>
+</dict>
 ~~~
 
 Server Side:
@@ -163,21 +178,29 @@ Client Side:
    *URL Request*:
 
 ~~~ http
-/writePlayerData?connection=$connectionToken&player=$localPlayerToken&data=$data
+/writePlayerData?connection=$connectionToken&localPlayer=$localPlayerToken&data=$data
 ~~~
 
    *Reponse*
   
    status : Boolean
    
+   binary
+~~~ binary
+   0 | 1
+~~~
+   
    json
 ~~~ json
 { "status" : (0|1) }
 ~~~
-  
-  html
-~~~ html
-status=(0|1)
+
+   plist  
+~~~ plist
+<dict>
+  <key>status</key>
+  <true/>|<false/>
+</dict>
 ~~~
 
 Read Data for the Local Player
@@ -190,21 +213,29 @@ Client Side:
    *URL Request*:
 
 ~~~ http
-/readPlayerData?connection=$connectionToken&player=$localPlayerToken
+/readPlayerData?connection=$connectionToken&localPlayer=$localPlayerToken
 ~~~
 
    *Response*
    
    data : Data
 
+   binary
+~~~ binary
+   Data
+~~~
+
    json
 ~~~ json
 { "data" : Data }
 ~~~
 
-   html
-~~~ html
-data=Data
+   plist
+~~~ plist
+<dict>
+  <key>data</key>
+  <data>Data</data>
+</dict>
 ~~~
 
 The returned data will be empty if there was no data to retrieve. The potential for an error in the connection may be needed too to have a status.
@@ -220,12 +251,33 @@ Client Side:
    *URL Request*
    
 ~~~ http
-   /createSession?connection=$connectionToken&player=$localPlayerToken
+   /createSession?connection=$connectionToken&localPlayer=$localPlayerToken
 ~~~
    
    *Response*
    
-   sessionToken : UUID
+   localSessionToken : UUID
+
+   json
+~~~ json
+{ 
+  "localSessionToken" : UUID,
+  "displayName" : String,
+  "shareCode" : String
+}
+~~~
+   
+   plist
+~~~ plist
+<dict>
+  <key>localSessionToken</key>
+  <string></string>
+  <key>displayName</key>
+  <string></string>
+  <key>shareCode</key>
+  <string></string>
+</dict>
+~~~
 
 Server Side:
 
@@ -242,7 +294,7 @@ Client Side:
    *URL Request*
    
 ~~~ http
-   /listSessions?connection=$connectionToken&player=$localPlayerToken
+   /listSessions?connection=$connectionToken&localPlayer=$localPlayerToken
 ~~~
 
    *Response*
@@ -256,7 +308,7 @@ Write data to a key for the session.
 
 Client Side:
 
-    *URL Request*
+   *URL Request*
     
 ~~~ http
    /writeSessionDataForKey?connection=$connectionToken&session=$sessionToken&key=$key&data=$data
@@ -290,7 +342,7 @@ A session is created with only one player, the only way to add players is to inv
 
 Client Side:
 
-   *Request*
+   *URL Request*
 
 ~~~ http
    /addPlayerToSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
@@ -307,7 +359,7 @@ Remove a player from a session
 
 Client Side:
 
-   *Request*
+   *URL Request*
 
 ~~~ http
    /removePlayerFromSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
