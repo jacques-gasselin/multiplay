@@ -57,7 +57,7 @@ Client Side:
 ~~~
 
    plist
-~~~ plist
+~~~ xml
 <dict>
   <key>connectionToken</key>
   <string>UUID</string>
@@ -134,7 +134,7 @@ Client Side:
 ~~~
    
    plist
-~~~ plist
+~~~ xml
 <dict>
   <key>localPlayerToken</key>
   <string></string>
@@ -196,7 +196,7 @@ Client Side:
 ~~~
 
    plist  
-~~~ plist
+~~~ xml
 <dict>
   <key>status</key>
   <true/>|<false/>
@@ -231,7 +231,7 @@ Client Side:
 ~~~
 
    plist
-~~~ plist
+~~~ xml
 <dict>
   <key>data</key>
   <data>Data</data>
@@ -268,7 +268,7 @@ Client Side:
 ~~~
    
    plist
-~~~ plist
+~~~ xml
 <dict>
   <key>localSessionToken</key>
   <string></string>
