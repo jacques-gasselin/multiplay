@@ -7,6 +7,18 @@ class MPPlayer {
     }
 };
 
+class MPPlayerFriend extends MPPlayer {
+    constructor(connection, remotePlayerToken, displayName, alias) {
+        super(displayName);
+        this.connection = connection;
+        this.remotePlayerToken = remotePlayerToken;
+        this.alias = alias;
+    }
+    getAlias() {
+        return this.alias;
+    }
+};
+
 class MPSession {
     constructor(connection, sessionToken, displayName) {
         this.connection = connection;
@@ -57,6 +69,26 @@ class MPLocalSession extends MPSession {
             return {};
         });
     }
+
+    static encodeStringToBytes(s) {
+        // FIXME use utf-8 conversion instead
+        var bytes = [];
+        for (var i = 0; i < s.length; i++) {
+            bytes[i] = s.charCodeAt(i);
+        }
+        return new Uint8Array(bytes);
+    }
+
+    sendObjectAsJSONData(object) {
+        let s = JSON.stringify(object);
+        // Do this if POST
+        //let data = encodeStringToBytes(s);
+        //let octets = new Blob(data, {type: "application/octet-stream"});
+        // Do this if GET
+        let octetsGETParam = encodeURIComponent(s);
+        let writeSessionsDataUrl = this.connection.baseUrl + "writeSessionData?connection=" + this.connection.connectionToken + "&session=" + this.sessionToken + "&data=" + octetsGETParam;
+        return fetch(writeSessionsDataUrl);
+    }
 };
 
 class MPLocalPlayer extends MPPlayer {
@@ -67,6 +99,7 @@ class MPLocalPlayer extends MPPlayer {
         this.friendCode = friendCode;
 
         this.sessions = [];
+        this.friends = [];
     }
 
     getLocalPlayerToken() {
@@ -80,6 +113,12 @@ class MPLocalPlayer extends MPPlayer {
         return this.sessions;
     }
 
+    addFriendWithCode(code) {
+        let url = this.connection.baseUrl + "addPlayerFriend.json?connection=" + this.connection.connectionToken + "&localPlayer=" + this.localPlayerToken + "&friendCode=" + code
+        return fetch(url)
+        .then(response => response.json())
+    }
+
     fetchSessions() {
         let listPlayerSessionsUrl = this.connection.baseUrl + "listPlayerSessions.json?connection=" + this.connection.connectionToken + "&localPlayer=" + this.localPlayerToken;
         return fetch(listPlayerSessionsUrl)
@@ -91,6 +130,21 @@ class MPLocalPlayer extends MPPlayer {
                 result.push(new MPLocalSession(this.connection, s.localSessionToken, s.displayName, s.shareCode));
             });
             this.sessions = result;
+            return result;
+        });
+    }
+
+    fetchFriends() {
+        let listPlayerFriendsUrl = this.connection.baseUrl + "listPlayerFriends.json?connection=" + this.connection.connectionToken + "&localPlayer=" + this.localPlayerToken;
+        return fetch(listPlayerFriendsUrl)
+        .then(response => response.json())
+        .then(data => {
+            let friends = data.friends;
+            var result = [];
+            friends.forEach(f => {
+                result.push(new MPPlayerFriend(this.connection, f.remotePlayerToken, f.displayName, f.alias));
+            });
+            this.friends = result;
             return result;
         });
     }
@@ -119,6 +173,18 @@ class MPLocalPlayer extends MPPlayer {
             }
             return session;
         });
+    }
+
+    leaveSession(session) {
+        let sessions = this.sessions;
+        const index = sessions.indexOf(session);
+        if (index > -1) {
+            sessions.splice(index, 1);
+        }
+        this.sessions = sessions;
+        let url = this.connection.baseUrl + "leaveSession.json?connection=" + this.connection.connectionToken + "&localPlayer=" + this.localPlayerToken + "&session=" + session.getSessionToken();
+        return fetch(url)
+        .then(response => response.json());
     }
 };
 

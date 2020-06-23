@@ -199,7 +199,7 @@ Client Side:
 ~~~ xml
 <dict>
   <key>status</key>
-  <true/>|<false/>
+  <true|false />
 </dict>
 ~~~
 

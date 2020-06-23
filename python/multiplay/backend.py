@@ -253,7 +253,11 @@ class Backend(object):
             connectionUUID = uuid.UUID(connectionUUID)
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
         sessionID = self._findSessionForShareCode(sessionShareCode)
-        return self._addPlayerToSession(playerID, sessionID)
+        if self._addPlayerToSession(playerID, sessionID):
+            localSessionUUID = uuid.uuid5(localPlayerUUID, str(sessionID))
+            self._storeLocalSessionForConnection(sessionID, localSessionUUID, connectionUUID)
+            return localSessionUUID
+        return None
 
     def leaveSession(self, connectionUUID, localPlayerUUID, localSessionUUID):
         if isinstance(localPlayerUUID, str):

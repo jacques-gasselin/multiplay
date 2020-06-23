@@ -53,11 +53,8 @@ function updateChannels() {
 }
 
 function updateFriends() {
-    let listPlayerFriendsUrl = connection.baseUrl + "listPlayerFriends.json?connection=" + connection.connectionToken + "&localPlayer=" + connection.getLocalPlayer().getLocalPlayerToken();
-    fetch(listPlayerFriendsUrl)
-    .then(response => response.json())
-    .then(data => {
-        let friends = data.friends;
+    connection.getLocalPlayer().fetchFriends()
+    .then(friends => {
         let ul = document.getElementById("friends");
         result = '';
         friends.forEach(f => result = result + '<li><a href="' + chatUrl + f.remotePlayerToken + '">' + f.displayName + '</li>');
@@ -85,10 +82,9 @@ function joinChannel() {
     });
 }
 
-function leaveChannel(c) {
-    let url = connection.baseUrl + "leaveSession.json?connection=" + connection.connectionToken + "&localPlayer=" + connection.getLocalPlayer().localPlayerToken + "&session=" + c;
-    fetch(url)
-    .then(response => response.json())
+function leaveChannel(localSessionToken) {
+    let session = connection.getLocalPlayer().getSessions().find(s => s.getSessionToken() == localSessionToken);
+    connection.getLocalPlayer().leaveSession(session)
     .then(data => {
         updateChannels();
     });
@@ -96,21 +92,10 @@ function leaveChannel(c) {
 
 function addFriend() {
     let code = prompt("Enter friend code");
-    let url = connection.baseUrl + "addPlayerFriend.json?connection=" + connection.connectionToken + "&localPlayer=" + connection.getLocalPlayer().getLocalPlayerToken() + "&friendCode=" + code
-    fetch(url)
-    .then(response => response.json())
+    connection.getLocalPlayer().addFriendWithCode(code)
     .then(data => {
         updateFriends();
     });
-}
-
-function encodeStringToBytes(s) {
-    // FIXME use utf-8 conversion instead
-	var bytes = [];
-	for (var i = 0; i < s.length; i++) {
-		bytes[i] = s.charCodeAt(i);
-	}
-	return new Uint8Array(bytes);
 }
 
 function send() {
@@ -129,13 +114,11 @@ function send() {
         textField.value = "";
 
         let m = { 'messages' : oldMessages.concat(newMessages) };
-        let s = JSON.stringify(m);
-        let data = encodeStringToBytes(s);
-        let octets = new Blob(data, {type: "application/octet-stream"});
-        let octetsGETParam = encodeURIComponent(s);
-        let writeSessionsDataUrl = connection.baseUrl + "writeSessionData?connection=" + connection.connectionToken + "&session=" + localSession.getSessionToken() + "&data=" + octetsGETParam;
-        fetch(writeSessionsDataUrl);
-        updateMessages();
+
+        localSession.sendObjectAsJSONData(m).
+        then(data => {
+            updateMessages();
+        });
     });
 }
 
