@@ -122,6 +122,44 @@ function send() {
     });
 }
 
+function updatePlayer(localPlayer) {
+    let displayName = localPlayer.getDisplayName();
+    let pname = document.getElementById("username");
+    let user = document.getElementById("user");
+    let sbutton = document.getElementById("sign-in-button");
+    let nbutton = document.getElementById("change-name-button");
+    if (localPlayer.isAuthenticated()) {
+        pname.innerHTML = "Signed in as " + displayName;
+        sbutton.style.display = "none";
+        nbutton.style.display = "block";
+        user.style.gridTemplateColumns = "auto 100px auto";
+    }
+    else {
+        pname.innerHTML = "Guest account " + displayName;
+        sbutton.style.display = "block";
+        nbutton.style.display = "none";
+        user.style.gridTemplateColumns = "80px auto auto";
+    }
+
+    let code = localPlayer.getFriendCode();
+    let pcode = document.getElementById("friendcode");
+    pcode.innerHTML = "Friend code : " + code;
+}
+
+function signIn() {
+    connection.getLocalPlayer().httpAuthenticate()
+    .then(localPlayer => {
+        updatePlayer(localPlayer);
+    });
+}
+
+function changeName() {
+    let name = prompt("New display name")
+    connection.getLocalPlayer().setDisplayName(name);
+    updatePlayer(connection.getLocalPlayer());
+    updateMessages();
+}
+
 function keyOverrideEnterToSend(event) {
     if (event.keyCode === 13) {
         event.preventDefault();
@@ -135,15 +173,8 @@ function load() {
     document.getElementById("message").addEventListener("keyup", keyOverrideEnterToSend);
 
     connection.connect().then(val => {
-        connection.login().then(val => {
-            let displayName = connection.getLocalPlayer().getDisplayName();
-            let pname = document.getElementById("username");
-            pname.innerHTML = "Signed in as " + displayName;
-
-            let code = connection.getLocalPlayer().getFriendCode();
-            let pcode = document.getElementById("friendcode");
-            pcode.innerHTML = "Friend code : " + code;
-
+        connection.login().then(localPlayer => {
+            updatePlayer(localPlayer);
             updateChannels();
             updateFriends();
             updateMessages();

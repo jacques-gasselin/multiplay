@@ -188,24 +188,34 @@ class Backend(object):
             result.append((remotePlayerUUID, name))
         return result
 
-    def authenticateLocalPlayer(self, connectionUUID, localPlayerUUID, auth_token_type, auth_token):
+    def authenticateLocalPlayer(self, connectionUUID, localPlayerUUID, auth_token_type, auth_token_unique, auth_token_secret):
         if isinstance(localPlayerUUID, str):
             localPlayerUUID = uuid.UUID(localPlayerUUID)
         if isinstance(connectionUUID, str):
             connectionUUID = uuid.UUID(connectionUUID)
         playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
-        authedPlayerID = self._findAuthenticatedPlayerForAuthToken(auth_token_type, auth_token)
+        authedPlayerID = self._findAuthenticatedPlayerForAuthToken(auth_token_type, auth_token_unique, auth_token_secret)
         if not authedPlayerID:
             # if the auth token is not in our table of auth tokens we migrate the current player
             # to be authorized and now other connections can get the same underlying player id
             # as long as their auth token matches
-            self._authenticatePlayerForAuthToken(auth_token_type, auth_token, playerID)
+            return self._authenticatePlayerForAuthToken(auth_token_type, auth_token_unique, auth_token_secret, playerID)
         else:
             # if it is then we need to migrate the local player to the authed player unless they are
             # already the same
             if playerID != authedPlayerID:
                 #TODO migrate
                 self._storeLocalPlayerForConnection(authedPlayerID, localPlayerUUID, connectionUUID)
+        return True
+
+    def isLocalPlayerAuthenticated(self, connectionUUID, localPlayerUUID):
+        if isinstance(localPlayerUUID, str):
+            localPlayerUUID = uuid.UUID(localPlayerUUID)
+        if isinstance(connectionUUID, str):
+            connectionUUID = uuid.UUID(connectionUUID)
+        playerID = self._findPlayerForLocalPlayerAndConnection(localPlayerUUID, connectionUUID)
+        authenticated = self._isPlayerAuthenticated(playerID)
+        return True if authenticated else False
 
     #### Session Management
 
@@ -318,11 +328,14 @@ class PickleBackend(Backend):
     def _findPlayerForDevice(self, localDeviceUUID):
         return self.__playerByDevice.get(localDeviceUUID, None)
 
-    def _findAuthenticatedPlayerForAuthToken(self, auth_token_type, auth_token):
-        return self.__playerByAuthToken.get((auth_token_type, auth_token), None)
+    def _findAuthenticatedPlayerForAuthToken(self, auth_token_type, auth_token_unique, auth_token_secret):
+        return self.__playerByAuthToken.get((auth_token_type, auth_token_unique, auth_token_secret), None)
 
-    def _authenticatePlayerForAuthToken(self, auth_token_type, auth_token, playerID):
-        self.__playerByAuthToken[(auth_token_type, auth_token)] = playerID
+    def _isPlayerAuthenticated(self, playerID):
+        return playerID in self.__playerByAuthToken.values()
+
+    def _authenticatePlayerForAuthToken(self, auth_token_type, auth_token_unique, auth_token_secret, playerID):
+        self.__playerByAuthToken[(auth_token_type, auth_token_unique, auth_token_secret)] = playerID
 
     def _createPlayerForDevice(self, localDeviceUUID):
         displayName = self._createDisplayName()
@@ -593,21 +606,29 @@ class Sqlite3Backend(Backend):
             return result[0]
         return None
 
-    def _findAuthenticatedPlayerForAuthToken(self, auth_token_type, auth_token):
-        selectQuery = 'SELECT player_id FROM authenticated_players WHERE auth_token_type="%s" AND auth_token="%s"' % (str(auth_token_type), str(auth_token))
+    def _findAuthenticatedPlayerForAuthToken(self, auth_token_type, auth_token_unique, auth_token_secret):
+        selectQuery = 'SELECT player_id FROM authenticated_players WHERE auth_token_type="%s" AND auth_token="%s"' % (str(auth_token_type), str(auth_token_unique)+":"+str(auth_token_secret))
         with self.__lock:
             result = self._executeQueryAndFetchOne(selectQuery)
         if result:
             return result[0]
         return None
 
-    def _authenticatePlayerForAuthToken(self, auth_token_type, auth_token, playerID):
+    def _isPlayerAuthenticated(self, playerID):
+        selectQuery = 'SELECT COUNT(player_id) FROM authenticated_players WHERE player_id=%i' % (playerID)
+        with self.__lock:
+            result = self._executeQueryAndFetchOne(selectQuery)
+        if result:
+            return result[0] > 0
+        return False
+
+    def _authenticatePlayerForAuthToken(self, auth_token_type, auth_token_unique, auth_token_secret, playerID):
         if self.logging:
-            print("_authenticatePlayerForAuthToken(%s, %s, %i)" % (auth_token_type, auth_token, playerID))
+            print("_authenticatePlayerForAuthToken(%s, %s, %s, %i)" % (auth_token_type, auth_token_unique, auth_token_secret, playerID))
         assert(playerID is not None)
-        if playerID is None or auth_token_type is None or auth_token is None:
+        if playerID is None or auth_token_type is None or auth_token_unique is None or auth_token_secret is None:
             return False
-        insertQuery = 'INSERT OR REPLACE INTO authenticated_players VALUES (%i, "%s", "%s")' % (playerID, str(auth_token_type), str(auth_token))
+        insertQuery = 'INSERT OR REPLACE INTO authenticated_players VALUES (%i, "%s", "%s")' % (playerID, str(auth_token_type), str(auth_token_unique)+":"+str(auth_token_secret))
         with self.__lock:
             self._executeQuery(insertQuery)
         return True

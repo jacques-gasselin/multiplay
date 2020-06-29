@@ -24,6 +24,9 @@ import json
 import sys
 import os
 
+class HttpAuthException(Exception):
+    pass
+
 class ServerInstance(object):
     def __init__(self, db):
         self.__db = db
@@ -39,10 +42,41 @@ class ServerInstance(object):
 
     def login(self, handler, connection, localDevice):
         print("LOGIN connection %s on device %s " % (connection, localDevice))
-        localPlayerUUID = self.__db.login(connection, localDevice)
-        displayName = self.__db.getPlayerDisplayName(connection, localPlayerUUID)
-        friendCode = self.__db.getPlayerFriendCode(connection, localPlayerUUID)
-        return { "localPlayerToken" : str(localPlayerUUID), "displayName" : str(displayName), "friendCode" : str(friendCode) }
+        localPlayer = self.__db.login(connection, localDevice)
+        displayName = self.__db.getPlayerDisplayName(connection, localPlayer)
+        friendCode = self.__db.getPlayerFriendCode(connection, localPlayer)
+        authenticated = self.__db.isLocalPlayerAuthenticated(connection, localPlayer)
+        return { "localPlayerToken" : str(localPlayer),
+                 "displayName" : str(displayName),
+                 "friendCode" : str(friendCode),
+                 "authenticated" : 1 if authenticated else 0}
+
+    def httpauthenticate(self, handler, connection, localPlayer):
+        if not 'Authorization' in handler.headers:
+            raise HttpAuthException()
+        auth = handler.headers['Authorization']
+        import base64
+        auth_type, auth_bytes = auth.split(" ")
+        username, password = base64.standard_b64decode(auth_bytes.encode()).decode().split(":")
+        print("username:", username)
+        print("password:", password)
+        import hashlib
+        md5 = hashlib.md5()
+        md5.update(username.encode())
+        md5.update(b':')
+        md5.update(password.encode())
+        if self.__db.authenticateLocalPlayer(connection, localPlayer, "HTTP " + auth_type, username, md5.hexdigest()):
+            displayName = self.__db.getPlayerDisplayName(connection, localPlayer)
+            friendCode = self.__db.getPlayerFriendCode(connection, localPlayer)
+            authenticated = self.__db.isLocalPlayerAuthenticated(connection, localPlayer)
+            return { "localPlayerToken" : str(localPlayer),
+                     "displayName" : str(displayName),
+                     "friendCode" : str(friendCode),
+                     "authenticated" : 1 if authenticated else 0}
+        return { "localPlayerToken" : "",
+                 "displayName" : "",
+                 "friendCode" : "",
+                 "authenticated" : 0 }
 
     def writeplayerdata(self, handler, connection, localPlayer, data):
         print("WRITE PLAYER DATA '%s' FOR player %s ON connection %s " % (str(data), localPlayer, connection))
@@ -253,6 +287,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         try:
             response = func(self, **argumentValueByName)
             print("-> ", response)
+        except HttpAuthException as e:
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="multiplay"')
+            self.end_headers()
+            self.wfile.write(str("0").encode())
+            return
         except TypeError as e:
             self._respond_error(400, e, format)
             return
@@ -295,8 +335,11 @@ def run(port, useSSL = False):
                     keyfile=os.path.expanduser('~/.ssh/multiplay-server-key.pem'),
                     certfile=os.path.expanduser('~/.ssh/multiplay-server-cert.pem'),
                     server_side=True)
+                print("serving at https://", httpd.server_address)
+            else:
+                print("serving at http://localhost:%i" % port)
+                print("chat client at http://localhost:%i/application/chat.html" % port)
             __httpd = httpd
-            print("serving at ", httpd.server_address)
             currentFilePath = os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
             httpd.site_root_path = os.path.realpath(os.path.join(currentFilePath, '..', '..', '..', 'www'))
             print("loading resources from ", httpd.site_root_path)

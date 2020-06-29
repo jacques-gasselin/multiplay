@@ -8,6 +8,10 @@ p {
     margin-bottom: 4px;
 }
 
+.hidden {
+    display: none;
+}
+
 .flex {
     display: flex;
 }
@@ -20,7 +24,7 @@ p {
 .top {
     display: grid;
     grid-template-rows: auto;
-    grid-template-columns: auto auto;
+    grid-template-columns: 80px auto auto;
     left: 0;
     top: 0;
     margin: 0px;

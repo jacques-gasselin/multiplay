@@ -92,11 +92,12 @@ class MPLocalSession extends MPSession {
 };
 
 class MPLocalPlayer extends MPPlayer {
-    constructor(connection, localPlayerToken, displayName, friendCode) {
+    constructor(connection, localPlayerToken, displayName, friendCode, authenticated) {
         super(displayName);
         this.connection = connection;
         this.localPlayerToken = localPlayerToken;
         this.friendCode = friendCode;
+        this.authenticated = authenticated;
 
         this.sessions = [];
         this.friends = [];
@@ -105,8 +106,32 @@ class MPLocalPlayer extends MPPlayer {
     getLocalPlayerToken() {
         return this.localPlayerToken;
     }
+
     getFriendCode() {
         return this.friendCode;
+    }
+
+    isAuthenticated() {
+        return this.authenticated;
+    }
+
+    setDisplayName(name) {
+        let url = this.connection.baseUrl + "writeplayerdisplayname.json?connection=" + this.connection.connectionToken + "&localPlayer=" + this.localPlayerToken + "&displayName=" + encodeURIComponent(name);
+        fetch(url);
+        this.displayName = name;
+    }
+
+    httpAuthenticate() {
+        let url = this.connection.baseUrl + "httpAuthenticate.json?connection=" + this.connection.connectionToken + "&localPlayer=" + this.localPlayerToken;
+        return fetch(url)
+        .then(response => response.json())
+        .then(v => {
+            this.localPlayerToken = v.localPlayerToken;
+            this.displayName = v.displayName;
+            this.friendCode = v.friendCode;
+            this.authenticated = v.authenticated;
+            return this;
+        });
     }
 
     getSessions() {
@@ -230,7 +255,10 @@ class MPConnection {
             let localPlayerToken = data.localPlayerToken;
             let displayName = data.displayName;
             let friendCode = data.friendCode;
-            this.localPlayer = new MPLocalPlayer(this, localPlayerToken, displayName, friendCode);
+            let authenticated = data.authenticated ? true : false;
+            let localPlayer = new MPLocalPlayer(this, localPlayerToken, displayName, friendCode, authenticated);
+            this.localPlayer = localPlayer;
+            return localPlayer;
         });
     }
 
