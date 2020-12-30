@@ -1,0 +1,43 @@
+<!DOCTYPE module PUBLIC
+"-//Puppy Crawl//DTD Check Configuration 1.2//EN"
+"http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
+
+<module name="Checker">
+    <module name="FileTabCharacter"/>
+    <module name="TreeWalker">
+        <property name="cacheFile" value="checkstyle.cachefile"/>
+        <module name="AvoidStarImport"/>
+        <module name="ConstantName">
+            <property name="format" value="^[A-Z][a-zA-Z_0-9]*$"/>
+        </module>
+        <module name="MemberName"/>
+        <module name="MethodName"/>
+        <module name="PackageName">
+            <property name="format" value="^[a-z0-9]+(\.[a-zA-Z_][a-zA-Z0-9_]*)*$"/>
+        </module>
+        <module name="LocalFinalVariableName"/>
+        <module name="LocalVariableName"/>
+        <module name="ParameterName"/>
+        <module name="TypeName"/>
+        <module name="CovariantEquals"/>
+        <module name="EqualsHashCode"/>
+        <module name="EmptyCatchBlock">
+           <property name="exceptionVariableName" value="ignore|expected|unused"/>
+        </module>
+        <module name="EmptyBlock"/>
+        <module name="EmptyForInitializerPad"/>
+        <module name="MethodParamPad"/>
+        <module name="GenericWhitespace"/>
+        <module name="VisibilityModifier"/>
+        <module name="FinalClass"/>
+        <module name="HideUtilityClassConstructor"/>
+        <module name="MutableException"/>
+        <module name="LeftCurly"/>
+        <module name="Indentation"/>
+        <module name="IllegalThrows"/>
+        <module name="IllegalInstantiation"/>
+        <module name="InnerAssignment"/>
+        <module name="UpperEll"/>
+    </module>
+    <module name="NewlineAtEndOfFile"/>
+</module>
