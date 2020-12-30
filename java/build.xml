@@ -1,0 +1,215 @@
+<project name="multiplay-java"
+         default="build"
+         basedir=".">
+
+    <property name="lib.dir"
+              location="${basedir}/lib"/>
+    <property name="dist.dir"
+              location="${basedir}/dist"/>
+    <property name="build.dir"
+              location="${basedir}/build"/>
+    <property name="src.dir"
+              location="${basedir}/src"/>
+    <property name="test.dir"
+              location="${basedir}/test"/>
+    <property name="docs.dir"
+              location="${basedir}/docs"/>
+    <property name="result.dir"
+              location="${basedir}/test_result"/>
+    <property name="reports.dir"
+              location="${basedir}/test_reports"/>
+    <property name="test.build.dir"
+              location="${basedir}/test_build"/>
+
+    <property name="checkstyle.policy"
+              location="${basedir}/checkstyle-policy.xml"/>
+
+    <path id="src.path">
+    </path>
+
+    <path id="src.run.path">
+        <path refid="src.path"/>
+        <pathelement location="${build.dir}"/>
+    </path>
+
+    <path id="test.path">
+        <path refid="src.run.path"/>
+        <pathelement location="${test.build.dir}"/>
+        <pathelement location="${lib.dir}/junit-4.4.jar"/>
+    </path>
+
+    <target name="checkstyle">
+        <taskdef resource="com/puppycrawl/tools/checkstyle/ant/checkstyle-ant-task.properties"
+                 classpath="${lib.dir}/checkstyle-8.3-all.jar"/>
+        <echo>*** Checkstyle source ***</echo>
+        <checkstyle failOnViolation="false"
+                    config="${checkstyle.policy}">
+            <classpath refid="src.path"/>
+            <formatter type="plain"/>
+            <fileset dir="${src.dir}" defaultexcludes="yes">
+                <include name="**/*.java"/>
+            </fileset>
+            <property key="checkstyle.cache.file"
+                      file="${checkstyle.policy}.src.cachefile"/>
+        </checkstyle>
+        <echo>*** Checkstyle tests ***</echo>
+        <checkstyle failOnViolation="false"
+                    config="${checkstyle.policy}">
+            <classpath refid="test.path"/>
+            <formatter type="plain"/>
+            <fileset dir="${test.dir}" defaultexcludes="yes">
+                <include name="**/*.java"/>
+            </fileset>
+            <property key="checkstyle.cache.file"
+                      file="${checkstyle.policy}.test.cachefile"/>
+        </checkstyle>
+    </target>
+
+    <target name="build-src"
+            depends="checkstyle"
+            description="builds the source">
+        <mkdir dir="${build.dir}"/>
+        <echo>*** Build source ***</echo>
+        <depend srcdir="${src.dir}"
+                destdir="${build.dir}"
+                cache="depcache"
+                closure="yes"/>
+        <javac destdir="${build.dir}"
+               fork="true"
+               debug="true"
+               failonerror="true"
+               source="1.8"
+               target="1.8"
+               includeantruntime="false">
+            <compilerarg value="-Xlint"/>
+            <src path="${src.dir}"/>
+            <include name="**/*.java"/>
+            <exclude name="**/android/**/*.java"/>
+            <classpath refid="src.path"/>
+        </javac>
+    </target>
+
+    <target name="build-jar"
+            depends="build-src"
+            description="runs the build">
+        <mkdir dir="${dist.dir}"/>
+        <jar destfile="${dist.dir}/multiplay-client.jar"
+             basedir="${build.dir}">
+            <exclude name="**/*Test.class"/>
+            <exclude name="**/android/**/*.class"/>
+            <exclude name="**/server/**/*.class"/>
+            <manifest>
+                <attribute name="Built-By"
+                           value="Multiplay"/>
+            </manifest>
+        </jar>
+        <jar destfile="${dist.dir}/multiplay-server.jar"
+             basedir="${build.dir}">
+            <exclude name="**/*Test.class"/>
+            <exclude name="**/android/**/*.class"/>
+            <exclude name="**/client/**/*.class"/>
+            <manifest>
+                <attribute name="Built-By"
+                           value="Multiplay"/>
+            </manifest>
+        </jar>
+        <jar destfile="${dist.dir}/multiplay-client-android.jar"
+             basedir="${build.dir}">
+            <include name="**/android/**/*.class"/>
+            <exclude name="**/*Test.class"/>
+            <exclude name="**/awt/**/*.class"/>
+            <exclude name="**/server/**/*.class"/>
+            <manifest>
+                <attribute name="Built-By"
+                           value="Multiplay"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="build"
+            depends="build-jar"
+            description="runs the build">
+
+    </target>
+
+    <target name="clean">
+        <delete failonerror="false">
+            <fileset dir="${test.build.dir}" includes="**/*"/>
+            <fileset dir="${build.dir}" includes="**/*.class"/>
+        </delete>
+    </target>
+
+    <target name="test"
+            depends="build-src">
+        <echo>*** Build tests ***</echo>
+        <mkdir dir="${test.build.dir}"/>
+        <depend srcdir="${test.dir}"
+                destdir="${test.build.dir}"
+                cache="depcache"
+                closure="yes"/>
+        <javac destdir="${test.build.dir}"
+               fork="true"
+               debug="true"
+               failonerror="true"
+               includeantruntime="false">
+            <src path="${test.dir}"/>
+            <include name="**/*.java"/>
+            <classpath refid="test.path"/>
+        </javac>
+        <echo>*** Run tests ***</echo>
+        <mkdir dir="${result.dir}"/>
+        <depend srcdir="${test.dir}"
+                destdir="${result.dir}"
+                cache="depcache"
+                closure="yes"/>
+        <junit showoutput="true"
+               printsummary="on"
+               haltonerror="false"
+               dir="${test.dir}"
+               fork="true"
+               forkmode="once">
+            <classpath refid="test.path"/>
+
+            <formatter usefile="false" type="brief"/>
+            <formatter type="xml"/>
+
+            <batchtest fork="yes"
+                       todir="${result.dir}">
+                <fileset dir="${test.dir}">
+                    <include name="**/*Test*.java"/>
+                    <exclude name="**/AllTests.java"/>
+                    <exclude name="**/TestCase.java"/>
+                    <exclude name="**/*AbstractTestCase*.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+        <echo>*** Make report ***</echo>
+        <mkdir dir="${reports.dir}"/>
+        <junitreport todir="${reports.dir}">
+            <fileset dir="${result.dir}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${reports.dir}/html"/>
+            <report format="noframes" todir="${reports.dir}/html"/>
+        </junitreport>
+    </target>
+
+    <target name="javadoc">
+        <mkdir dir="${docs.dir}"/>
+        <echo>*** Javadoc source ***</echo>
+        <javadoc destdir="${docs.dir}/api"
+                 author="true"
+                 version="true"
+                 use="true"
+                 windowtitle="Multiplay Application Programming Interface">
+            <arg value="-notimestamp"/>
+            <classpath refid="src.path"/>
+            <fileset dir="${src.dir}" defaultexcludes="yes">
+                <exclude name="**/*.md"/>
+            </fileset>
+            <doctitle><![CDATA[<h1>Multiplay Application Programming Interface</h1>]]></doctitle>
+            <bottom><![CDATA[<i>Copyright &#169; Jacques Gasselin. All Rights Reserved.</i>]]></bottom>
+            <link href="https://github.com/jacques-gasselin/multiplay"/>
+        </javadoc>
+    </target>
+</project>
