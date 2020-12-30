@@ -30,6 +30,7 @@ Connect the Game
 
 Call the API with the game server URL and the game UUID. The UUID is purely a token that the server and client has agreed upon. GameConnectionToken is returned that is used for all communication between the game and the server from this point onward.
 
+```
 ***********************************************
 * .--------.                        .--------.
 * |        +----connect:gameUUID--->|        |
@@ -38,6 +39,7 @@ Call the API with the game server URL and the game UUID. The UUID is purely a to
 * '--------'                        '--------'
 *
 ***********************************************
+```
 
 Client Side:
 
@@ -93,6 +95,7 @@ Connect the Local Player
 Use the GameConnectionToken to create a player, or fetch the last used player, with the localDeviceUUID.
 For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor UUIDString]
 
+```
 ****************************************************************
 *   .---------.                                    .--------.
 *   |         +----login:connection,localDevice--->|        |
@@ -111,6 +114,7 @@ For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor 
 *    '--------'                                    
 *
 ****************************************************************
+```
 
 Client Side:
 
