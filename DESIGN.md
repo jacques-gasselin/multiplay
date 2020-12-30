@@ -14,6 +14,7 @@ Types
 
 The Client - Server connection is based on a few base types
 
+```
  Name       | Range    | Description
 ------------|----------|-----------------
  Boolean    |  [0, 1]  | 0=False, !0=True
@@ -23,6 +24,7 @@ The Client - Server connection is based on a few base types
  List<UUID> |   N/A    | A comma separated list of UUIDs.
  IPAddress  |  IPv6    | 128bit unsigned number, as 32 hexadecimals grouped in to 4 digits separated by colons, or 8 bytes when connected via a socket
  Port       | [0,2^32] | A port number to combine with an IPAddress for a socket connection
+```
   [Client-Server types]
 
 Connect the Game
@@ -30,6 +32,7 @@ Connect the Game
 
 Call the API with the game server URL and the game UUID. The UUID is purely a token that the server and client has agreed upon. GameConnectionToken is returned that is used for all communication between the game and the server from this point onward.
 
+```
 ***********************************************
 * .--------.                        .--------.
 * |        +----connect:gameUUID--->|        |
@@ -38,6 +41,7 @@ Call the API with the game server URL and the game UUID. The UUID is purely a to
 * '--------'                        '--------'
 *
 ***********************************************
+```
 
 Client Side:
 
@@ -93,6 +97,7 @@ Connect the Local Player
 Use the GameConnectionToken to create a player, or fetch the last used player, with the localDeviceUUID.
 For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor UUIDString]
 
+```
 ****************************************************************
 *   .---------.                                    .--------.
 *   |         +----login:connection,localDevice--->|        |
@@ -111,6 +116,7 @@ For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor 
 *    '--------'                                    
 *
 ****************************************************************
+```
 
 Client Side:
 
