@@ -14,7 +14,6 @@ Types
 
 The Client - Server connection is based on a few base types
 
-```
  Name       | Range    | Description
 ------------|----------|-----------------
  Boolean    |  [0, 1]  | 0=False, !0=True
@@ -24,7 +23,6 @@ The Client - Server connection is based on a few base types
  List<UUID> |   N/A    | A comma separated list of UUIDs.
  IPAddress  |  IPv6    | 128bit unsigned number, as 32 hexadecimals grouped in to 4 digits separated by colons, or 8 bytes when connected via a socket
  Port       | [0,2^32] | A port number to combine with an IPAddress for a socket connection
-```
   [Client-Server types]
 
 Connect the Game
