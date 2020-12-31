@@ -38,7 +38,7 @@
         <pathelement location="${lib.dir}/junit-4.4.jar"/>
     </path>
 
-    <target name="checkstyle">
+    <target name="-checkstyle">
         <taskdef resource="com/puppycrawl/tools/checkstyle/ant/checkstyle-ant-task.properties"
                  classpath="${lib.dir}/checkstyle-8.3-all.jar"/>
         <echo>*** Checkstyle source ***</echo>
@@ -65,9 +65,8 @@
         </checkstyle>
     </target>
 
-    <target name="build-src"
-            depends="checkstyle"
-            description="builds the source">
+    <target name="-build-src"
+            depends="-checkstyle">
         <mkdir dir="${build.dir}"/>
         <echo>*** Build source ***</echo>
         <depend srcdir="${src.dir}"
@@ -89,9 +88,8 @@
         </javac>
     </target>
 
-    <target name="build-jar"
-            depends="build-src"
-            description="runs the build">
+    <target name="-build-jar"
+            depends="-build-src">
         <mkdir dir="${dist.dir}"/>
         <jar destfile="${dist.dir}/multiplay-client.jar"
              basedir="${build.dir}">
@@ -127,12 +125,13 @@
     </target>
 
     <target name="build"
-            depends="build-jar"
-            description="runs the build">
+            depends="-build-jar"
+            description="build the project and puts the .jar files in the `dist` folder">
 
     </target>
 
-    <target name="clean">
+    <target name="clean"
+            description="cleans the project">
         <delete failonerror="false">
             <fileset dir="${test.build.dir}" includes="**/*"/>
             <fileset dir="${build.dir}" includes="**/*.class"/>
@@ -140,7 +139,8 @@
     </target>
 
     <target name="test"
-            depends="build-src">
+            depends="-build-src"
+            description="tests the project and puts the reports in the `test_reports` folder">
         <echo>*** Build tests ***</echo>
         <mkdir dir="${test.build.dir}"/>
         <depend srcdir="${test.dir}"
