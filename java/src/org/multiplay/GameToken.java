@@ -8,4 +8,9 @@ public class GameToken {
     public GameToken(UUID uuid) {
         this.uuid = uuid;
     }
+
+    @Override
+    public final String toString() {
+        return uuid.toString();
+    }
 }

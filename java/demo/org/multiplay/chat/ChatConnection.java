@@ -14,8 +14,9 @@ public class ChatConnection extends Connection {
         super(CHAT_GAME_TOKEN, null, serverURL, null);
     }
 
-    public static CompletionStage<Connection> connect(URL serverURL) {
+    public static CompletionStage<Connection> connect(URL serverURL, boolean verboseLoggingEnabled) {
         ChatConnection conn = new ChatConnection(serverURL);
+        conn.setVerboseLoggingEnabled(verboseLoggingEnabled);
         return conn.connectAsync();
     }
 }

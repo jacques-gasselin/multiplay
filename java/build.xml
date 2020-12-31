@@ -243,19 +243,33 @@
         </javadoc>
     </target>
 
+    <property name="demo.protocol" value="http" />
+    <property name="demo.host" value="localhost" />
+    <property name="demo.port" value="12345" />
+
+    <macrodef name="run-demo">
+        <sequential>
+            <fail unless="run.class">Must set property 'run.class'</fail>
+            <echo>*** Running ${run.class} ***</echo>
+            <java classname="${run.class}"
+                  failonerror="true"
+                  fork="true"
+                  dir="${build.dir}">
+                <classpath refid="demo.run.path"/>
+                <arg line="--protocol ${demo.protocol}"/>
+                <arg line="--host ${demo.host}"/>
+                <arg line="--port ${demo.port}"/>
+                <arg value="--verbose"/>
+            </java>
+        </sequential>
+    </macrodef>
+
     <target name="run-chat"
             description="runs Chat demo"
             depends="build">
         <property name="run.class"
                   value="org.multiplay.chat.Chat"/>
-        <fail unless="run.class">Must set property 'run.class'</fail>
-        <echo>*** Running ${run.class} ***</echo>
-        <java classname="${run.class}"
-              failonerror="true"
-              fork="true"
-              dir="${build.dir}">
-            <classpath refid="demo.run.path"/>
-        </java>
+        <run-demo />
     </target>
 
 </project>

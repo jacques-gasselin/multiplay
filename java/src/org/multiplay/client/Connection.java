@@ -18,6 +18,7 @@ public abstract class Connection {
     private final URL serverURL;
     private final Executor executor;
     private ConnectionToken connectionToken = null;
+    private boolean verboseLoggingEnabled = false;
 
     protected Connection(GameToken gameToken, DeviceToken deviceToken, URL serverURL, Executor executor) {
         this.gameToken = gameToken;
@@ -36,13 +37,19 @@ public abstract class Connection {
      * @return {Promise} a promise that is fulfilled when the game is connected.
      */
     protected CompletionStage<Connection> connectAsync() {
+        if (isVerboseLoggingEnabled()) {
+            System.out.println("Connection.connectAsync()");
+        }
         String protocol = serverURL.getProtocol();
         String host = serverURL.getHost();
         int port = serverURL.getPort();
         return CompletableFuture.supplyAsync(() -> {
             HttpURLConnection conn = null;
             try {
-                URL connectUrl = new URL(protocol, host, port, "connect.json?game=" + gameToken.toString());
+                URL connectUrl = new URL(protocol, host, port, "/connect.json?game=" + gameToken.toString());
+                if (isVerboseLoggingEnabled()) {
+                    System.out.println("Connecting to server at " + connectUrl.toString());
+                }
                 conn = (HttpURLConnection) connectUrl.openConnection();
                 // TODO: grab the response as JSON and get the connection token
             }
@@ -56,5 +63,13 @@ public abstract class Connection {
             }
             return this;
         }, executor);
+    }
+
+    public final boolean isVerboseLoggingEnabled() {
+        return verboseLoggingEnabled;
+    }
+
+    public final void setVerboseLoggingEnabled(boolean enabled) {
+        this.verboseLoggingEnabled = enabled;
     }
 }
