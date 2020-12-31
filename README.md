@@ -1,7 +1,7 @@
 # multiplay
 Framework for doing multiplayer games
 
-See the markdown document at README.md for more details
+See the markdown document at DESIGN.md for more details
 
 To test start the server
 
