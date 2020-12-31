@@ -8,8 +8,14 @@
               location="${basedir}/dist"/>
     <property name="build.dir"
               location="${basedir}/build"/>
+    <property name="demo.build.dir"
+              location="${basedir}/demo_build"/>
+    <property name="test.build.dir"
+              location="${basedir}/test_build"/>
     <property name="src.dir"
               location="${basedir}/src"/>
+    <property name="demo.dir"
+              location="${basedir}/demo"/>
     <property name="test.dir"
               location="${basedir}/test"/>
     <property name="docs.dir"
@@ -18,8 +24,6 @@
               location="${basedir}/test_result"/>
     <property name="reports.dir"
               location="${basedir}/test_reports"/>
-    <property name="test.build.dir"
-              location="${basedir}/test_build"/>
 
     <property name="checkstyle.policy"
               location="${basedir}/checkstyle-policy.xml"/>
@@ -27,9 +31,18 @@
     <path id="src.path">
     </path>
 
+    <path id="demo.path">
+        <pathelement location="${build.dir}"/>
+    </path>
+
     <path id="src.run.path">
         <path refid="src.path"/>
         <pathelement location="${build.dir}"/>
+    </path>
+
+    <path id="demo.run.path">
+        <path refid="demo.path"/>
+        <pathelement location="${demo.build.dir}"/>
     </path>
 
     <path id="test.path">
@@ -68,9 +81,14 @@
     <target name="-build-src"
             depends="-checkstyle">
         <mkdir dir="${build.dir}"/>
+        <mkdir dir="${demo.build.dir}"/>
         <echo>*** Build source ***</echo>
         <depend srcdir="${src.dir}"
                 destdir="${build.dir}"
+                cache="depcache"
+                closure="yes"/>
+        <depend srcdir="${demo.dir}"
+                destdir="${demo.build.dir}"
                 cache="depcache"
                 closure="yes"/>
         <javac destdir="${build.dir}"
@@ -85,6 +103,18 @@
             <include name="**/*.java"/>
             <exclude name="**/android/**/*.java"/>
             <classpath refid="src.path"/>
+        </javac>
+        <javac destdir="${demo.build.dir}"
+               fork="true"
+               debug="true"
+               failonerror="true"
+               source="1.8"
+               target="1.8"
+               includeantruntime="false">
+            <compilerarg value="-Xlint"/>
+            <src path="${demo.dir}"/>
+            <include name="**/*.java"/>
+            <classpath refid="demo.path"/>
         </javac>
     </target>
 
@@ -212,4 +242,20 @@
             <link href="https://github.com/jacques-gasselin/multiplay"/>
         </javadoc>
     </target>
+
+    <target name="run-chat"
+            description="runs Chat demo"
+            depends="build">
+        <property name="run.class"
+                  value="org.multiplay.chat.Chat"/>
+        <fail unless="run.class">Must set property 'run.class'</fail>
+        <echo>*** Running ${run.class} ***</echo>
+        <java classname="${run.class}"
+              failonerror="true"
+              fork="true"
+              dir="${build.dir}">
+            <classpath refid="demo.run.path"/>
+        </java>
+    </target>
+
 </project>

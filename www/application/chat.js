@@ -170,7 +170,6 @@ function keyOverrideEnterToSend(event) {
 function load() {
     // override 'Enter' to send.
     document.getElementById("message").addEventListener("keyup", keyOverrideEnterToSend);
-    document.getElementById("message").addEventListener("keyup", keyOverrideEnterToSend);
 
     connection.connect().then(val => {
         connection.login().then(localPlayer => {
