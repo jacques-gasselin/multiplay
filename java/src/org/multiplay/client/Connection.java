@@ -76,6 +76,10 @@ public abstract class Connection {
         executor.shutdown();
     }
 
+    public ConnectionToken getConnectionToken() {
+        return connectionToken;
+    }
+
     <T> T fetchJSONInto(String resource, T response) {
         String protocol = serverURL.getProtocol();
         String host = serverURL.getHost();

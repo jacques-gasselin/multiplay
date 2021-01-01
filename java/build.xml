@@ -281,7 +281,7 @@
             description="runs Chat demo"
             depends="build">
         <property name="run.class"
-                  value="org.multiplay.chat.Chat"/>
+                  value="org.multiplay.chat.swing.ChatFrame"/>
         <run-demo />
     </target>
 

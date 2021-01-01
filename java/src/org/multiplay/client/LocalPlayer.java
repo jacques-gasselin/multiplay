@@ -1,9 +1,14 @@
 package org.multiplay.client;
 
+import org.multiplay.ConnectionToken;
 import org.multiplay.LocalPlayerToken;
+import org.multiplay.RemotePlayerToken;
+import org.multiplay.client.response.LocalPlayerFriendsResponse;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public class LocalPlayer extends Player {
     private final Connection connection;
@@ -28,11 +33,11 @@ public class LocalPlayer extends Player {
         return playerToken;
     }
 
-    String getFriendCode() {
+    public String getFriendCode() {
         return friendCode;
     }
 
-    boolean isAuthenticated() {
+    public boolean isAuthenticated() {
         return authenticated;
     }
 
@@ -42,5 +47,32 @@ public class LocalPlayer extends Player {
 
     List<Friend> getFriends() {
         return friends;
+    }
+
+    public List<Friend> fetchFriends() {
+        String resource = "/listPlayerFriends.json?connection=" + connection.getConnectionToken() + "&localPlayer=" + playerToken;
+        LocalPlayerFriendsResponse response = new LocalPlayerFriendsResponse();
+        connection.fetchJSONInto(resource, response);
+        friends.clear();
+
+        for (LocalPlayerFriendsResponse.Friend f: response.getFriends()) {
+            RemotePlayerToken token = new RemotePlayerToken(f.getRemotePlayerToken());
+            String displayName = f.getDisplayName();
+            String alias = null;
+
+            Friend friend = new Friend(connection, token, displayName, alias);
+            friends.add(friend);
+        }
+
+        return friends;
+    }
+
+    public CompletionStage<List<Friend>> fetchFriendsAsync() {
+        if (connection.isVerboseLoggingEnabled()) {
+            System.out.println("LocalPlayer.fetchFriendsAsync()");
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            return fetchFriends();
+        });
     }
 }

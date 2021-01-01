@@ -9,7 +9,7 @@ public class Player {
         }
     }
 
-    final String getDisplayName() {
+    public final String getDisplayName() {
         return displayName;
     }
 }
