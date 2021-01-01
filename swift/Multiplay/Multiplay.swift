@@ -262,16 +262,27 @@ class MPConnection {
     var localPlayer: MPLocalPlayer?
     var isConnected: Bool {
         get {
-            return gameUUID != nil && deviceUUID != nil && baseUrl != nil && connectionToken != nil && localPlayer != nil
+            return gameUUID != nil && deviceUUID != nil && baseUrl != nil && connectionToken != nil
+        }
+    }
+    var isLoggedIn: Bool {
+        get {
+            return isConnected && localPlayer != nil
         }
     }
     
-    init(withGameUUID g: String, deviceUUID d:String, baseUrl u:String) {
+    init(gameUUID g: String, deviceUUID d:String, baseUrl u:String) {
         gameUUID = g
+        baseUrl = u.last! == "/" ? u : u + "/"
         deviceUUID = d
-        baseUrl = u
     }
-    
+
+    init(gameUUID g: String, baseUrl u:String) {
+        gameUUID = g
+        baseUrl = u.last! == "/" ? u : u + "/"
+        deviceUUID = UUID().uuidString
+    }
+
     func connect() -> Bool {
         guard let baseUrl = baseUrl else { return false }
         guard let gameUUID = gameUUID else { return false }
@@ -300,8 +311,8 @@ class MPConnection {
         
         let loginUrl = baseUrl! + "login.json?connection=" + connectionToken! + "&localDevice=" + deviceUUID!
         if let json = fetch(url: URL(string: loginUrl)) {
-            if let localPlayerToken = json["localPlayerToken"].string, let displayName = json["displayName"].string, let friendCode = json["friendCode"].string, let authenticated = json["authenticated"].bool {
-                    let localPlayer = MPLocalPlayer(withConnection: self, localPlayerToken: localPlayerToken, displayName: displayName, friendCode: friendCode, authenticated: authenticated)
+            if let localPlayerToken = json["localPlayerToken"].string, let displayName = json["displayName"].string, let friendCode = json["friendCode"].string, let authenticated = json["authenticated"].int {
+                let localPlayer = MPLocalPlayer(withConnection: self, localPlayerToken: localPlayerToken, displayName: displayName, friendCode: friendCode, authenticated: authenticated != 0 ? true : false)
                 self.localPlayer = localPlayer
                 return localPlayer
             }
@@ -310,72 +321,3 @@ class MPConnection {
     }
 }
 
-/**
- * Concrete subclass of MPConnection to use when connection from a browser client with the 'window' context
- */
-
-/*
-class MPBrowserConnection: MPConnection {
-
-    init(gameUUID: String?) {
-        if gameUUID == nil {
-            return
-        }
-
-        var port = 12345;
-        if (window.location.port) {
-            port = window.location.port;
-        }
-        else if (window.location.protocol == 'http:') {
-            port = 80;
-        }
-        else if (window.location.protocol == 'https:') {
-            port = 443;
-        }
-        let baseUrl = window.location.protocol + '//' + window.location.hostname + ':' + port + '/';
-
-        let deviceUUID = MPBrowserConnection.getCookie('multiplay-device'); // format is "00000000-0000-0000-0000-000000000000";
-        if (!deviceUUID) {
-            let a = MPBrowserConnection.randomHexString(4);
-            let b = MPBrowserConnection.randomHexString(2);
-            let c = MPBrowserConnection.randomHexString(2);
-            let d = MPBrowserConnection.randomHexString(2);
-            let e = MPBrowserConnection.randomHexString(6);
-            deviceUUID = [a, b, c, d, e].join("-");
-        }
-        // keep it for 30 days by default
-        MPBrowserConnection.setCookie('multiplay-device', deviceUUID, 30);
-
-        super(gameUUID, deviceUUID, baseUrl);
-    }
-
-    static randomHexString(n) {
-        let r = window.crypto.getRandomValues(new Uint8Array(n))
-        let c = Array.prototype.map.call(r, b => b.toString(16).padStart(2, "0"));
-        return c.join("");
-    }
-
-    static setCookie(cname, cvalue, exdays) {
-      var d = new Date();
-      d.setTime(d.getTime() + (exdays*24*60*60*1000));
-      var expires = "expires="+ d.toUTCString();
-      document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
-    }
-
-    static getCookie(cname) {
-      var name = cname + "=";
-      var decodedCookie = decodeURIComponent(document.cookie);
-      var ca = decodedCookie.split(';');
-      for(var i = 0; i <ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) == ' ') {
-          c = c.substring(1);
-        }
-        if (c.indexOf(name) == 0) {
-          return c.substring(name.length, c.length);
-        }
-      }
-      return "";
-    }
-}
-*/

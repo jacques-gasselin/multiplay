@@ -25,6 +25,8 @@ let package = Package(
         .testTarget(
             name: "MultiplayTests",
             dependencies: ["Multiplay"],
-            path: "swift/Tests"),
+            path: "swift/Tests",
+            exclude: ["LinuxMain.swift"]),
+        
     ]
 )
