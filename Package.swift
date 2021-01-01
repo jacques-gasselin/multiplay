@@ -5,11 +5,18 @@ import PackageDescription
 
 let package = Package(
     name: "Multiplay",
+    platforms: [
+        .macOS(.v10_15),
+        .iOS(.v11)
+    ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
             name: "Multiplay",
             targets: ["Multiplay"]),
+        .executable(
+            name: "MultiplayChat",
+            targets: ["MultiplayChat"])
     ],
     dependencies: [
         .package(url: "https://github.com/SwiftyJSON/SwiftyJSON.git", from: "5.0.0"),
@@ -27,6 +34,10 @@ let package = Package(
             dependencies: ["Multiplay"],
             path: "swift/Tests",
             exclude: ["LinuxMain.swift"]),
-        
+        .target(
+            name: "MultiplayChat",
+            dependencies: ["Multiplay"],
+            path: "swift/MultiplayChat",
+            exclude: ["java", "python", "www"]),
     ]
 )
