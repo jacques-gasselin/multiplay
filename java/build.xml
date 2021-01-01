@@ -29,9 +29,11 @@
               location="${basedir}/checkstyle-policy.xml"/>
 
     <path id="src.path">
+        <pathelement location="${lib.dir}/genson-1.6.jar"/>
     </path>
 
     <path id="demo.path">
+        <path refid="src.path"/>
         <pathelement location="${build.dir}"/>
     </path>
 
@@ -64,6 +66,17 @@
             </fileset>
             <property key="checkstyle.cache.file"
                       file="${checkstyle.policy}.src.cachefile"/>
+        </checkstyle>
+        <echo>*** Checkstyle demos ***</echo>
+        <checkstyle failOnViolation="false"
+                    config="${checkstyle.policy}">
+            <classpath refid="demo.path"/>
+            <formatter type="plain"/>
+            <fileset dir="${demo.dir}" defaultexcludes="yes">
+                <include name="**/*.java"/>
+            </fileset>
+            <property key="checkstyle.cache.file"
+                      file="${checkstyle.policy}.demo.cachefile"/>
         </checkstyle>
         <echo>*** Checkstyle tests ***</echo>
         <checkstyle failOnViolation="false"
