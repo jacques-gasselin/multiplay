@@ -27,17 +27,17 @@ let package = Package(
         .target(
             name: "Multiplay",
             dependencies: ["SwiftyJSON"],
-            path: "Multiplay",
+            path: "swift/Multiplay",
             exclude: []),
         .testTarget(
             name: "MultiplayTests",
             dependencies: ["Multiplay"],
-            path: "Tests",
+            path: "swift/Tests",
             exclude: ["LinuxMain.swift"]),
         .target(
             name: "MultiplayChat",
             dependencies: ["Multiplay"],
-            path: "MultiplayChat",
+            path: "swift/MultiplayChat",
             exclude: []),
     ]
 )
