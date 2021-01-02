@@ -7,6 +7,7 @@ Framework for multiplayer games
   - Java
   - JavaScript
   - Python
+  - Swift
 - Server implementations for you to host your own server.
 
 See DESIGN.md for more details on the overall design.
