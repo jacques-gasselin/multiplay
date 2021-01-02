@@ -12,6 +12,7 @@ import SwiftUI
 @testable import Multiplay
 
 struct ChatView: View {
+    @State var baseUrl: String = "http://localhost:12345"
     @State var playerName: String = "Guest"
     @State var friendCode: String = "???"
 
@@ -26,23 +27,40 @@ struct ChatView: View {
     var body: some View {
         VStack {
             HStack {
-                Text("Name: ")
-                    .padding()
-                    .background(Capsule().fill(Color.blue))
+                Text("Multiplay Server: ")
                     .padding()
                     .frame(minHeight: CGFloat(30))
 
                 // https://www.simpleswiftguide.com/swiftui-textfield-complete-tutorial/
-                TextField("Player Name:", text: $playerName, onEditingChanged:{ (changed) in
-                    print("$playerName changed - \(changed)")
+                TextField("Server:", text: $baseUrl, onEditingChanged:{ (changed) in
+                    print("$baseUrl edited - \(changed)")
                 }) {
-                    print("$playerName committed \(playerName)")
+                    connect()
                 }
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: CGFloat(30))
+            }
+            HStack {
+                Text("Name: ")
+                    .padding()
+                    .frame(minHeight: CGFloat(30))
+
+                // https://www.simpleswiftguide.com/swiftui-textfield-complete-tutorial/
+                TextField("Name:", text: $playerName, onEditingChanged:{ (changed) in
+                    print("$playerName edited - \(changed)")
+                }) {
+                    print("$friendCode committed \(friendCode)")
+                }
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(minHeight: CGFloat(30))
+            }
+            HStack {
+                Text("Friend Code: ")
+                    .padding()
+                    .frame(minHeight: CGFloat(30))
 
                 TextField("FriendCode:", text: $friendCode, onEditingChanged:{ (changed) in
-                    print("$friendCode changed - \(changed)")
+                    print("$friendCode edited - \(changed)")
                 }) {
                     print("$friendCode committed \(friendCode)")
                 }
@@ -52,15 +70,19 @@ struct ChatView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear() {
-            let gameUUID = UUID().uuidString
-            let baseUrl = "http://localhost:12345"
-            let connection = MPConnection(gameUUID:gameUUID, baseUrl:baseUrl)
-            let _ = connection.connect()
-            if let localPlayer = connection.login() {
-                playerName = localPlayer.displayName == nil ? "Guest" : localPlayer.displayName!
-                friendCode = localPlayer.friendCode == nil ? "???" : localPlayer.friendCode!
-            }
+            connect()
         }
+    }
+    
+    func connect() {
+        let gameUUID = UUID().uuidString
+        let connection = MPConnection(gameUUID:gameUUID, baseUrl:baseUrl)
+        let _ = connection.connect()
+        if let localPlayer = connection.login() {
+            playerName = localPlayer.displayName == nil ? "Guest" : localPlayer.displayName!
+            friendCode = localPlayer.friendCode == nil ? "???" : localPlayer.friendCode!
+        }
+
     }
 }
 
