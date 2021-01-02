@@ -1,4 +1,7 @@
 package org.multiplay;
 
-public class ConnectionToken {
+public class ConnectionToken extends Token {
+    public ConnectionToken(String tokenString) {
+        super(tokenString);
+    }
 }

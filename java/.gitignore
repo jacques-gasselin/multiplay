@@ -1,5 +1,6 @@
 build
+demo_build
 dist
 depcache
 checkstyle.cachefile
-test_report
+test_reports
