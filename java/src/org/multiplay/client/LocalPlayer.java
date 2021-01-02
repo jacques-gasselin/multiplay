@@ -3,7 +3,10 @@ package org.multiplay.client;
 import org.multiplay.ConnectionToken;
 import org.multiplay.LocalPlayerToken;
 import org.multiplay.RemotePlayerToken;
+import org.multiplay.SessionToken;
+import org.multiplay.client.response.CreateSessionResponse;
 import org.multiplay.client.response.LocalPlayerFriendsResponse;
+import org.multiplay.client.response.LocalPlayerSessionsResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,8 +56,8 @@ public class LocalPlayer extends Player {
         String resource = "/listPlayerFriends.json?connection=" + connection.getConnectionToken() + "&localPlayer=" + playerToken;
         LocalPlayerFriendsResponse response = new LocalPlayerFriendsResponse();
         connection.fetchJSONInto(resource, response);
-        friends.clear();
 
+        List<Friend> friends = new ArrayList<>(response.getFriends().size());
         for (LocalPlayerFriendsResponse.Friend f: response.getFriends()) {
             RemotePlayerToken token = new RemotePlayerToken(f.getRemotePlayerToken());
             String displayName = f.getDisplayName();
@@ -63,6 +66,8 @@ public class LocalPlayer extends Player {
             Friend friend = new Friend(connection, token, displayName, alias);
             friends.add(friend);
         }
+
+        this.friends = friends;
 
         return friends;
     }
@@ -73,6 +78,56 @@ public class LocalPlayer extends Player {
         }
         return CompletableFuture.supplyAsync(() -> {
             return fetchFriends();
+        });
+    }
+
+    public List<Session> fetchSessions() {
+        String resource = "/listPlayerSessions.json?connection=" + connection.getConnectionToken() + "&localPlayer=" + playerToken;
+        LocalPlayerSessionsResponse response = new LocalPlayerSessionsResponse();
+        connection.fetchJSONInto(resource, response);
+
+        List<Session> sessions = new ArrayList<>(response.getSessions().size());
+        for (LocalPlayerSessionsResponse.Session s: response.getSessions()) {
+            SessionToken sessionToken = new SessionToken(s.getLocalSessionToken());
+            String displayName = s.getDisplayName();
+            String shareCode = s.getShareCode();
+
+            Session session = new LocalSession(connection, sessionToken, displayName, shareCode);
+            sessions.add(session);
+        }
+
+        this.sessions = sessions;
+
+        return sessions;
+    }
+
+    public CompletionStage<List<Session>> fetchSessionsAsync() {
+        if (connection.isVerboseLoggingEnabled()) {
+            System.out.println("LocalPlayer.fetchSessionsAsync()");
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            return fetchSessions();
+        });
+    }
+
+    public Session createSessionWithName(String name) {
+        String resource = "/createSession.json?connection=" + connection.getConnectionToken()
+                + "&localPlayer=" + playerToken + "&displayName=" + name;
+        CreateSessionResponse response = new CreateSessionResponse();
+        connection.fetchJSONInto(resource, response);
+
+        SessionToken sessionToken = new SessionToken(response.getLocalSessionToken());
+        String displayName = response.getDisplayName();
+        String shareCode = response.getShareCode();
+        return new LocalSession(connection, sessionToken, displayName, shareCode);
+    }
+
+    public CompletionStage<Session> createSessionWithNameAsync(String name) {
+        if (connection.isVerboseLoggingEnabled()) {
+            System.out.println("LocalPlayer.createSessionWithNameAsync(" + name + ")");
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            return createSessionWithName(name);
         });
     }
 }

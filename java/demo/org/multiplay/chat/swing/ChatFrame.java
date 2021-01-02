@@ -23,9 +23,11 @@ public class ChatFrame extends JFrame implements UserInterface {
 
     private DefaultListModel<Session> channelsListModel = new DefaultListModel<Session>();
     private JList channelsList = new JList(channelsListModel);
+    private JButton addChannelButton = new JButton("+");
 
     private DefaultListModel<Friend> friendsListModel = new DefaultListModel<Friend>();
     private JList friendsList = new JList(friendsListModel);
+    private JButton addFriendButton = new JButton("+");
 
     private JPanel channelsAndFriendsPanel = new JPanel();
     private JScrollPane channelsAndFriendsPanelScrollPane = new JScrollPane(channelsAndFriendsPanel);
@@ -60,13 +62,25 @@ public class ChatFrame extends JFrame implements UserInterface {
         Dimension minChatMessageScrollDimension = new Dimension(400, 350);
         Dimension minChatMessageEntryDimension = new Dimension(400, 50);
 
-        channelsList.setBackground(Color.YELLOW);
-        friendsList.setBackground(Color.ORANGE);
+        Dimension buttonSize = new Dimension(24, 24);
+
+        addChannelButton.setMinimumSize(buttonSize);
+        addChannelButton.setPreferredSize(buttonSize);
+        addChannelButton.setMaximumSize(buttonSize);
+        addChannelButton.addActionListener(actionEvent -> {
+            createChannel();
+        });
+
+        addFriendButton.setMinimumSize(buttonSize);
+        addFriendButton.setPreferredSize(buttonSize);
+        addFriendButton.setMaximumSize(buttonSize);
+        addFriendButton.addActionListener(actionEvent -> {
+            addFriend();
+        });
 
         channelsAndFriendsPanel.setMinimumSize(minChannelsDimension);
         channelsAndFriendsPanel.setPreferredSize(minChannelsDimension);
-        channelsAndFriendsPanel.setBackground(Color.RED);
-
+        channelsAndFriendsPanel.setBackground(Color.LIGHT_GRAY);
 
         chatPanel.setMinimumSize(minChatDimension);
         chatPanel.setBackground(Color.WHITE);
@@ -96,16 +110,18 @@ public class ChatFrame extends JFrame implements UserInterface {
         channelsAndFriendsPanel.setAlignmentX(0f);
         channelsAndFriendsPanel.setBorder(BorderFactory.createEmptyBorder(5, 5,5,5));
         Box channelsBox = Box.createHorizontalBox();
-        channelsBox.setAlignmentX(0f);
         channelsBox.add(new JLabel("Channels"));
-        channelsBox.add(new JButton("+"));
+        channelsBox.add(Box.createRigidArea(new Dimension(10, 1)));
+        channelsBox.add(addChannelButton);
+        channelsBox.add(Box.createHorizontalGlue());
         channelsAndFriendsPanel.add(channelsBox);
         channelsAndFriendsPanel.add(channelsList);
-        channelsAndFriendsPanel.add(Box.createVerticalStrut(10));
+        channelsAndFriendsPanel.add(Box.createRigidArea(new Dimension(1, 10)));
         Box friendsBox = Box.createHorizontalBox();
-        friendsBox.setAlignmentX(0f);
         friendsBox.add(new JLabel("Friends"));
-        friendsBox.add(new JButton("+"));
+        friendsBox.add(Box.createRigidArea(new Dimension(10, 1)));
+        friendsBox.add(addFriendButton);
+        friendsBox.add(Box.createHorizontalGlue());
         channelsAndFriendsPanel.add(friendsBox);
         channelsAndFriendsPanel.add(friendsList);
 
@@ -146,14 +162,33 @@ public class ChatFrame extends JFrame implements UserInterface {
         }
     }
 
+    void createChannel() {
+        String name = "channel1";
+        player.createSessionWithNameAsync(name).thenAccept(channel -> {
+            // FIXME the new channel is returned, just update the UI incrementally
+            updateChannels();
+            updateMessages();
+        });
+    }
+
+    void addFriend() {
+
+    }
+
     @Override
     public void updateChannels() {
-
+        player.fetchSessionsAsync().thenAccept(sessions -> {
+            channelsListModel.clear();
+            for (Session session : sessions) {
+                channelsListModel.addElement(session);
+            }
+        });
     }
 
     @Override
     public void updateFriends() {
         player.fetchFriendsAsync().thenAccept(friends -> {
+            friendsListModel.clear();
             for (Friend friend : friends) {
                 friendsListModel.addElement(friend);
             }
