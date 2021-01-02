@@ -35,7 +35,7 @@ struct ChatView: View {
                 TextField("Server:", text: $baseUrl, onEditingChanged:{ (changed) in
                     print("$baseUrl edited - \(changed)")
                 }) {
-                    connect()
+                    self.connect()
                 }
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: CGFloat(30))
@@ -49,7 +49,7 @@ struct ChatView: View {
                 TextField("Name:", text: $playerName, onEditingChanged:{ (changed) in
                     print("$playerName edited - \(changed)")
                 }) {
-                    print("$friendCode committed \(friendCode)")
+                    print("$friendCode committed \(self.friendCode)")
                 }
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: CGFloat(30))
@@ -62,7 +62,7 @@ struct ChatView: View {
                 TextField("FriendCode:", text: $friendCode, onEditingChanged:{ (changed) in
                     print("$friendCode edited - \(changed)")
                 }) {
-                    print("$friendCode committed \(friendCode)")
+                    print("$friendCode committed \(self.friendCode)")
                 }
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: CGFloat(30))
@@ -70,7 +70,7 @@ struct ChatView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear() {
-            connect()
+            self.connect()
         }
     }
     

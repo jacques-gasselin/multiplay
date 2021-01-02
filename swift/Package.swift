@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -27,17 +27,17 @@ let package = Package(
         .target(
             name: "Multiplay",
             dependencies: ["SwiftyJSON"],
-            path: "swift/Multiplay",
-            exclude: ["java", "python", "www"]),
+            path: "Multiplay",
+            exclude: []),
         .testTarget(
             name: "MultiplayTests",
             dependencies: ["Multiplay"],
-            path: "swift/Tests",
+            path: "Tests",
             exclude: ["LinuxMain.swift"]),
         .target(
             name: "MultiplayChat",
             dependencies: ["Multiplay"],
-            path: "swift/MultiplayChat",
-            exclude: ["java", "python", "www"]),
+            path: "MultiplayChat",
+            exclude: []),
     ]
 )
