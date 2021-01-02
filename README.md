@@ -28,3 +28,12 @@ Or run the tests
 
 > python3 python/test/test_json_responses.py
 
+----
+
+Swift Package Manager
+---------------------
+
+To test out the Swift bindings you can run the following at the project root.
+
+> swift run
+
