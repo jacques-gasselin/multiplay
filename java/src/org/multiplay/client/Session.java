@@ -1,8 +1,11 @@
 package org.multiplay.client;
 
 import org.multiplay.SessionToken;
+import org.multiplay.client.response.SessionPlayersResponse;
 
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletionStage;
 
 public class Session {
@@ -29,6 +32,15 @@ public class Session {
         String resource = "/writeSessionData?connection=" + connection.getConnectionToken() + "&session=" + this.sessionToken +
                 "&data=" + octetsGETParam;
         return connection.fetchAsync(resource);
+    }
+
+    public CompletionStage<List<Player>> fetchPlayersAsync() {
+        String resource = "/listSessionPlayers?connection=" + connection.getConnectionToken() + "&session=" + this.sessionToken;
+        return connection.fetchJSONIntoAsync(resource, new SessionPlayersResponse()).thenApply(response -> {
+            List<Player> players = new ArrayList<>();
+
+            return players;
+        });
     }
 
     public SessionToken getSessionToken() {

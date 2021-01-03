@@ -233,6 +233,9 @@ public class ChatFrame extends JFrame implements UserInterface {
         if (sessionCode != null) {
             player.joinSessionWithCodeAsync(sessionCode).thenAccept(channel -> {
                 if (channel != null) {
+                    channel.fetchPlayersAsync().thenAccept(players -> {
+                        System.out.println(players);
+                    });
                     SwingUtilities.invokeLater(() -> {
                         channelsListModel.addElement(channel);
                         channelsList.validate();
@@ -262,6 +265,11 @@ public class ChatFrame extends JFrame implements UserInterface {
     @Override
     public void updateChannels() {
         player.fetchSessionsAsync().thenAccept(sessions -> {
+            for (Session s : sessions) {
+                s.fetchPlayersAsync().thenAccept(players -> {
+                    System.out.println(s + " players " + players);
+                });
+            }
             SwingUtilities.invokeLater(() -> {
                 channelsListModel.clear();
                 for (Session session : sessions) {
