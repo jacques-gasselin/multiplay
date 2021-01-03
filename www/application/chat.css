@@ -6,6 +6,12 @@ body {
 p {
     margin-top: 3px;
     margin-bottom: 4px;
+    text-rendering: optimizeLegibility;
+    font-smooth: always;
+    font-smoothing: antialiased;
+    -moz-font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .hidden {
@@ -19,6 +25,10 @@ p {
 .item {
     margin-left: 2px;
     padding: 1px;
+}
+
+.player-name {
+    color: gray;
 }
 
 .top {
@@ -35,7 +45,7 @@ p {
 .bottom {
     display: grid;
     grid-template-rows: auto;
-    grid-template-columns: 200px auto;
+    grid-template-columns: 250px auto;
     position: absolute;
     left: 0;
     top: 30px;
@@ -46,11 +56,13 @@ p {
 
 .left {
     left: 0;
-    min-width: 200px;
     height: inherit;
     background-color: rgba(128, 5, 10, 1);
     color: white;
+    text-rendering: optimizeLegibility;
     font-smooth: always;
+    font-smoothing: antialiased;
+    -moz-font-smoothing: antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -76,6 +88,7 @@ p {
 }
 
 .messages {
+    padding: 10px;
 }
 
 .message-input-div {
@@ -90,7 +103,20 @@ p {
 }
 
 .button-small {
-    font-size: 12px;
-    padding: 1px 1px;
-    height: 32px;
+    font-size: 8pt;
+    padding: 0pt;
+    height: 20pt;
+    text-rendering: optimizeLegibility;
+    font-smooth: always;
+    font-smoothing: antialiased;
+    -moz-font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.button-leave {
+    float: right;
+    font-size: 4pt;
+    padding: 0pt;
+    margin-right: 2pt;
 }

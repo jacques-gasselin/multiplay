@@ -7,12 +7,14 @@ let localSession = null;
 window.setInterval(updateMessages, 15000);
 
 function updateMessages() {
+    var player = connection.getLocalPlayer();
+
     let queryString = window.location.search;
     let urlParams = new URLSearchParams(queryString);
     if (urlParams.has('channel')) {
         let localSessionToken = urlParams.get('channel');
         if (localSessionToken) {
-            localSession = connection.getLocalPlayer().getSessions().find(s => s.getSessionToken() == localSessionToken);
+            localSession = player.getSessions().find(s => s.getSessionToken() == localSessionToken);
         }
     }
 
@@ -26,14 +28,31 @@ function updateMessages() {
         let div = document.getElementById("messages");
         result = '';
         if (messages) {
-            messages.forEach(m => result = result + '<p>' + m.sender + ': ' + m.message + '</p>');
+            var lastSender = "";
+            var isMe = false;
+            var pTag = '<p>';
+            messages.forEach(m => {
+                if (lastSender != m.sender) {
+                    lastSender = m.sender;
+                    isMe = (m.sender == player.getDisplayName());
+                    pTag = isMe ? '<p style="text-align:right">' : '<p>'
+                    result = result + '<br/>' + pTag + '<i class="player-name">' + m.sender + '</i></p>'
+                }
+                if (isMe) {
+                    result = result + pTag + m.message + '&nbsp;</p>';
+                }
+                else {
+                    result = result + pTag + '&nbsp;' + m.message + '</p>';
+                }
+            });
         }
         div.innerHTML = result;
     });
 }
 
 function updateChannels() {
-    connection.getLocalPlayer().fetchSessions()
+    var player = connection.getLocalPlayer();
+    player.fetchSessions()
     .then(channels => {
         if (!localSession && channels) {
             localSession = channels[0];
@@ -45,7 +64,7 @@ function updateChannels() {
         channels.forEach(c => {
             result = result
              + '<li>' + c.getShareCode() + ':<a class="item" href="' + chatUrl + c.getSessionToken() + '">'+ c.getDisplayName() + '</a>'
-             + '<button class="button-small" onclick="leaveChannel(\'' + c.getSessionToken() +'\')">Leave</button>'
+             + '<button class="button-leave" onclick="leaveChannel(\'' + c.getSessionToken() +'\')">&#x2796;</button>'
              + '</li>';
         });
         ul.innerHTML = result;
