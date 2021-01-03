@@ -4,10 +4,7 @@ import org.multiplay.ConnectionToken;
 import org.multiplay.LocalPlayerToken;
 import org.multiplay.RemotePlayerToken;
 import org.multiplay.SessionToken;
-import org.multiplay.client.response.CreateSessionResponse;
-import org.multiplay.client.response.LocalPlayerFriendsResponse;
-import org.multiplay.client.response.LocalPlayerSessionsResponse;
-import org.multiplay.client.response.StatusResponse;
+import org.multiplay.client.response.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -129,6 +126,27 @@ public class LocalPlayer extends Player {
         }
         return CompletableFuture.supplyAsync(() -> {
             return createSessionWithName(name);
+        });
+    }
+
+    public Session joinSessionWithCode(String sessionCode) {
+        String resource = "/joinSession.json?connection=" + connection.getConnectionToken()
+                + "&localPlayer=" + playerToken + "&sessionCode=" + sessionCode;
+        JoinSessionResponse response = new JoinSessionResponse();
+        connection.fetchJSONInto(resource, response);
+
+        SessionToken sessionToken = new SessionToken(response.getLocalSessionToken());
+        String displayName = response.getDisplayName();
+        String shareCode = response.getShareCode();
+        return new LocalSession(connection, sessionToken, displayName, shareCode);
+    }
+
+    public CompletionStage<Session> joinSessionWithCodeAsync(String sessionCode) {
+        if (connection.isVerboseLoggingEnabled()) {
+            System.out.println("LocalPlayer.joinSessionWithCodeAsync(" + sessionCode + ")");
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            return joinSessionWithCode(sessionCode);
         });
     }
 

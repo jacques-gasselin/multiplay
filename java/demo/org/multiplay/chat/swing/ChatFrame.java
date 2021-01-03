@@ -28,6 +28,7 @@ public class ChatFrame extends JFrame implements UserInterface {
     private DefaultListModel<Session> channelsListModel = new DefaultListModel<Session>();
     private JList channelsList = new JList(channelsListModel);
     private JButton addChannelButton = new JButton("+");
+    private JButton joinChannelButton = new JButton("Join");
 
     private DefaultListModel<Friend> friendsListModel = new DefaultListModel<Friend>();
     private JList friendsList = new JList(friendsListModel);
@@ -85,9 +86,15 @@ public class ChatFrame extends JFrame implements UserInterface {
         addChannelButton.setMinimumSize(buttonSize);
         addChannelButton.setPreferredSize(buttonSize);
         addChannelButton.setMaximumSize(buttonSize);
-        addChannelButton.setBorder(null);
         addChannelButton.addActionListener(actionEvent -> {
             createChannel();
+        });
+
+        joinChannelButton.setMinimumSize(buttonSize);
+        joinChannelButton.setPreferredSize(buttonSize);
+        joinChannelButton.setMaximumSize(buttonSize);
+        joinChannelButton.addActionListener(actionEvent -> {
+            joinChannel();
         });
 
         addFriendButton.setMinimumSize(buttonSize);
@@ -135,6 +142,7 @@ public class ChatFrame extends JFrame implements UserInterface {
         channelsTitleBox.add(new JLabel("Channels"));
         channelsTitleBox.add(Box.createRigidArea(new Dimension(10, 1)));
         channelsTitleBox.add(addChannelButton);
+        channelsTitleBox.add(joinChannelButton);
         channelsTitleBox.add(Box.createHorizontalGlue());
         channelsAndFriendsPanel.add(channelsTitleBox);
         Box channelsBox = Box.createHorizontalBox();
@@ -204,6 +212,24 @@ public class ChatFrame extends JFrame implements UserInterface {
                 "");
         if (name != null) {
             player.createSessionWithNameAsync(name).thenAccept(channel -> {
+                // FIXME the new channel is returned, just update the UI incrementally
+                updateChannels();
+                updateMessages();
+            });
+        }
+    }
+
+    void joinChannel() {
+        String sessionCode = (String)JOptionPane.showInputDialog(
+                joinChannelButton,
+                "Existing channel share code:",
+                "Join Channel",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                null,
+                "");
+        if (sessionCode != null) {
+            player.joinSessionWithCodeAsync(sessionCode).thenAccept(channel -> {
                 // FIXME the new channel is returned, just update the UI incrementally
                 updateChannels();
                 updateMessages();
