@@ -7,6 +7,7 @@ import org.multiplay.SessionToken;
 import org.multiplay.client.response.CreateSessionResponse;
 import org.multiplay.client.response.LocalPlayerFriendsResponse;
 import org.multiplay.client.response.LocalPlayerSessionsResponse;
+import org.multiplay.client.response.StatusResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -128,6 +129,23 @@ public class LocalPlayer extends Player {
         }
         return CompletableFuture.supplyAsync(() -> {
             return createSessionWithName(name);
+        });
+    }
+
+    public void addFriendWithCode(String friendCode) {
+        String resource = "/addPlayerFriend.json?connection=" + connection.getConnectionToken()
+                + "&localPlayer=" + playerToken + "&friendCode=" + friendCode;
+        StatusResponse response = new StatusResponse();
+        connection.fetchJSONInto(resource, response);
+    }
+
+    public CompletionStage<Void> addFriendWithCodeAsync(String friendCode) {
+        if (connection.isVerboseLoggingEnabled()) {
+            System.out.println("LocalPlayer.addFriendWithCodeAsync(" + friendCode + ")");
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            addFriendWithCode(friendCode);
+            return null;
         });
     }
 }

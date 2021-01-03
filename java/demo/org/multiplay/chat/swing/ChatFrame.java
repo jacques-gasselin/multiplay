@@ -163,16 +163,37 @@ public class ChatFrame extends JFrame implements UserInterface {
     }
 
     void createChannel() {
-        String name = "channel1";
-        player.createSessionWithNameAsync(name).thenAccept(channel -> {
-            // FIXME the new channel is returned, just update the UI incrementally
-            updateChannels();
-            updateMessages();
-        });
+        String name = (String)JOptionPane.showInputDialog(
+                addChannelButton,
+                "New channel name:",
+                "Add Channel",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                null,
+                "");
+        if (name != null) {
+            player.createSessionWithNameAsync(name).thenAccept(channel -> {
+                // FIXME the new channel is returned, just update the UI incrementally
+                updateChannels();
+                updateMessages();
+            });
+        }
     }
 
     void addFriend() {
-
+        String friendCode = (String)JOptionPane.showInputDialog(
+                addFriendButton,
+                "Friend code:",
+                "Add Friend",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                null,
+                "");
+        if (friendCode != null) {
+            player.addFriendWithCodeAsync(friendCode).thenAccept(friend -> {
+                updateFriends();
+            });
+        }
     }
 
     @Override
