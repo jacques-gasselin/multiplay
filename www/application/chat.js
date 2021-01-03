@@ -66,6 +66,7 @@ function updateChannels() {
              + '<li>'
              + '<div class="tooltip">'
              + '<a class="item" href="' + chatUrl + c.getSessionToken() + '">'+ c.getDisplayName() + '</a>'
+             + '&nbsp;'
              + '<span class="tooltiptext">' + c.getShareCode() + '</span>'
              + '</div>'
              + '<button class="button-leave" onclick="leaveChannel(\'' + c.getSessionToken() +'\')">&#x2796;</button>'
