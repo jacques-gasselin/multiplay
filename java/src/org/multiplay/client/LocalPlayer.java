@@ -20,8 +20,8 @@ public class LocalPlayer extends Player {
     private String friendCode = "";
     private boolean authenticated = false;
 
-    private List<Session> sessions = new ArrayList<Session>();
-    private List<Friend> friends = new ArrayList<Friend>();
+    private List<LocalSession> sessions = new ArrayList<>();
+    private List<Friend> friends = new ArrayList<>();
 
     LocalPlayer(Connection connection, LocalPlayerToken localPlayerToken, String displayName, String friendCode, boolean authenticated) {
         super(displayName);
@@ -45,7 +45,7 @@ public class LocalPlayer extends Player {
         return authenticated;
     }
 
-    List<Session> getSessions() {
+    public List<LocalSession> getLocalSessions() {
         return sessions;
     }
 
@@ -82,18 +82,18 @@ public class LocalPlayer extends Player {
         });
     }
 
-    public List<Session> fetchSessions() {
+    public List<LocalSession> fetchSessions() {
         String resource = "/listPlayerSessions.json?connection=" + connection.getConnectionToken() + "&localPlayer=" + playerToken;
         LocalPlayerSessionsResponse response = new LocalPlayerSessionsResponse();
         connection.fetchJSONInto(resource, response);
 
-        List<Session> sessions = new ArrayList<>(response.getSessions().size());
+        List<LocalSession> sessions = new ArrayList<>(response.getSessions().size());
         for (LocalPlayerSessionsResponse.Session s: response.getSessions()) {
             SessionToken sessionToken = new SessionToken(s.getLocalSessionToken());
             String displayName = s.getDisplayName();
             String shareCode = s.getShareCode();
 
-            Session session = new LocalSession(connection, sessionToken, displayName, shareCode);
+            LocalSession session = new LocalSession(connection, sessionToken, displayName, shareCode);
             sessions.add(session);
         }
 
@@ -102,7 +102,7 @@ public class LocalPlayer extends Player {
         return sessions;
     }
 
-    public CompletionStage<List<Session>> fetchSessionsAsync() {
+    public CompletionStage<List<LocalSession>> fetchSessionsAsync() {
         if (connection.isVerboseLoggingEnabled()) {
             System.out.println("LocalPlayer.fetchSessionsAsync()");
         }

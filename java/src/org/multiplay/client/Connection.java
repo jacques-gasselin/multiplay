@@ -1,5 +1,6 @@
 package org.multiplay.client;
 
+import com.owlike.genson.stream.JsonStreamException;
 import org.multiplay.ConnectionToken;
 import org.multiplay.DeviceToken;
 import org.multiplay.GameToken;
@@ -10,16 +11,14 @@ import org.multiplay.client.response.ConnectionResponse;
 import org.multiplay.client.response.LoginResponse;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.NetworkInterface;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.*;
 
 public abstract class Connection {
     private final GameToken gameToken;
@@ -80,6 +79,39 @@ public abstract class Connection {
         return connectionToken;
     }
 
+    CompletionStage<Void> fetchAsync(String resource) {
+        String protocol = serverURL.getProtocol();
+        String host = serverURL.getHost();
+        int port = serverURL.getPort();
+
+        return CompletableFuture.supplyAsync(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL fetchURL = new URL(protocol, host, port, resource);
+                if (isVerboseLoggingEnabled()) {
+                    System.out.println(fetchURL);
+                }
+                conn = (HttpURLConnection) fetchURL.openConnection();
+                // grab the response
+                try (InputStream is = conn.getInputStream()) {
+                    int success = is.read();
+                    if (isVerboseLoggingEnabled()) {
+                        System.out.println(success);
+                    }
+                }
+            }
+            catch (Throwable t) {
+                t.printStackTrace(System.err);
+            }
+            finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+            return null;
+        }, executor);
+    }
+
     <T> T fetchJSONInto(String resource, T response) {
         String protocol = serverURL.getProtocol();
         String host = serverURL.getHost();
@@ -94,7 +126,13 @@ public abstract class Connection {
             conn = (HttpURLConnection) fetchURL.openConnection();
             // grab the response as JSON and get the player token and data
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                jsonDeserializer.deserializeInto(reader, response);
+                try {
+                    jsonDeserializer.deserializeInto(reader, response);
+                }
+                catch (JsonStreamException e) {
+                    System.err.println(e);
+                }
+
                 if (isVerboseLoggingEnabled()) {
                     System.out.println(response);
                 }
@@ -111,6 +149,12 @@ public abstract class Connection {
         return response;
     }
 
+    <T> CompletionStage<T> fetchJSONIntoAsync(String resource, T response) {
+        return CompletableFuture.supplyAsync(() -> {
+            return fetchJSONInto(resource, response);
+        }, executor);
+    }
+
     /**
      * Connect to the game's instance of the multiplay service.
      * @return {Promise} a promise that is fulfilled when the game is connected.
@@ -125,7 +169,7 @@ public abstract class Connection {
             fetchJSONInto(resource, response);
             connectionToken = new ConnectionToken(response.getConnectionToken());
             return this;
-        });
+        }, executor);
     }
 
     public LocalPlayer login() {
@@ -156,5 +200,9 @@ public abstract class Connection {
 
     public final void setVerboseLoggingEnabled(boolean enabled) {
         this.verboseLoggingEnabled = enabled;
+    }
+
+    public Executor getExecutor() {
+        return executor;
     }
 }

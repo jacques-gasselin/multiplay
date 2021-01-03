@@ -2,6 +2,8 @@ package org.multiplay.client;
 
 import org.multiplay.SessionToken;
 
+import java.util.concurrent.CompletionStage;
+
 public class LocalSession extends Session {
     private String shareCode;
 
@@ -12,5 +14,10 @@ public class LocalSession extends Session {
 
     String getShareCode() {
         return this.shareCode;
+    }
+
+    @Override
+    public String toString() {
+        return getDisplayName() + " #" + getShareCode();
     }
 }
