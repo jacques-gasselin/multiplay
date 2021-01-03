@@ -35,7 +35,7 @@ public class Session {
     }
 
     public CompletionStage<List<Player>> fetchPlayersAsync() {
-        String resource = "/listSessionPlayers?connection=" + connection.getConnectionToken() + "&session=" + this.sessionToken;
+        String resource = "/listSessionPlayers.json?connection=" + connection.getConnectionToken() + "&session=" + this.sessionToken;
         return connection.fetchJSONIntoAsync(resource, new SessionPlayersResponse()).thenApply(response -> {
             List<Player> players = new ArrayList<>();
 
