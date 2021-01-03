@@ -156,13 +156,13 @@ class ServerInstance(object):
     def listsessionplayers(self, handler, connection, session):
         print("LIST players for session %s ON connection %s " % (session, connection))
         players = []
-        return { "players" : str(players) }
+        return { "players" : players }
 
     def listplayersessions(self, handler, connection, localPlayer):
         print("LIST sessions for player %s ON connection %s " % (localPlayer, connection))
         sessionsNamesAndCodes = self.__db.listPlayerSessions(connection, localPlayer)
         sessions = [{ 'localSessionToken' : str(s), 'displayName' : n, 'shareCode' : c } for s, n, c in sessionsNamesAndCodes]
-        return { "sessions" : str(sessions) }
+        return { "sessions" : sessions }
 
 class PickleServerInstance(ServerInstance):
     def __init__(self):
