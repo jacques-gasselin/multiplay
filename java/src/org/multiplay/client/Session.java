@@ -31,6 +31,10 @@ public class Session {
         return connection.fetchAsync(resource);
     }
 
+    public SessionToken getSessionToken() {
+        return sessionToken;
+    }
+
     public String getDisplayName() {
         return displayName;
     }

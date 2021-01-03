@@ -25,6 +25,11 @@ public class MessagesResponse implements JSONSerializable {
         public void setMessage(String message) {
             this.message = message;
         }
+
+        @Override
+        public String toString() {
+            return sender + ":" + message;
+        }
     }
 
     private List<Message> messages = new ArrayList<>();
@@ -35,6 +40,11 @@ public class MessagesResponse implements JSONSerializable {
 
     public void setMessages(List<Message> messages) {
         this.messages = messages;
+    }
+
+    @Override
+    public String toString() {
+        return messages.toString();
     }
 
     @Override

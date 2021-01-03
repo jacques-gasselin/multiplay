@@ -212,9 +212,11 @@ public class ChatFrame extends JFrame implements UserInterface {
                 "");
         if (name != null) {
             player.createSessionWithNameAsync(name).thenAccept(channel -> {
-                // FIXME the new channel is returned, just update the UI incrementally
-                updateChannels();
-                updateMessages();
+                SwingUtilities.invokeLater(() -> {
+                    channelsListModel.addElement(channel);
+                    channelsList.validate();
+                    updateMessages();
+                });
             });
         }
     }
@@ -230,9 +232,13 @@ public class ChatFrame extends JFrame implements UserInterface {
                 "");
         if (sessionCode != null) {
             player.joinSessionWithCodeAsync(sessionCode).thenAccept(channel -> {
-                // FIXME the new channel is returned, just update the UI incrementally
-                updateChannels();
-                updateMessages();
+                if (channel != null) {
+                    SwingUtilities.invokeLater(() -> {
+                        channelsListModel.addElement(channel);
+                        channelsList.validate();
+                        updateMessages();
+                    });
+                }
             });
         }
     }
@@ -256,20 +262,25 @@ public class ChatFrame extends JFrame implements UserInterface {
     @Override
     public void updateChannels() {
         player.fetchSessionsAsync().thenAccept(sessions -> {
-            channelsListModel.clear();
-            for (Session session : sessions) {
-                channelsListModel.addElement(session);
-            }
+            SwingUtilities.invokeLater(() -> {
+                channelsListModel.clear();
+                for (Session session : sessions) {
+                    channelsListModel.addElement(session);
+                }
+                channelsList.validate();
+            });
         });
     }
 
     @Override
     public void updateFriends() {
         player.fetchFriendsAsync().thenAccept(friends -> {
-            friendsListModel.clear();
-            for (Friend friend : friends) {
-                friendsListModel.addElement(friend);
-            }
+            SwingUtilities.invokeLater(() -> {
+                friendsListModel.clear();
+                for (Friend friend : friends) {
+                    friendsListModel.addElement(friend);
+                }
+            });
         });
     }
 

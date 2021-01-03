@@ -13,4 +13,16 @@ public abstract class Token {
     public final String toString() {
         return uuid.toString();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        }
+        if (obj instanceof Token) {
+            Token t = (Token) obj;
+            return t.uuid.equals(uuid);
+        }
+        return false;
+    }
 }

@@ -6,6 +6,7 @@ import org.multiplay.RemotePlayerToken;
 import org.multiplay.SessionToken;
 import org.multiplay.client.response.*;
 
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -109,15 +110,21 @@ public class LocalPlayer extends Player {
     }
 
     public Session createSessionWithName(String name) {
+        String encodedName = URLEncoder.encode(name);
         String resource = "/createSession.json?connection=" + connection.getConnectionToken()
-                + "&localPlayer=" + playerToken + "&displayName=" + name;
+                + "&localPlayer=" + playerToken + "&displayName=" + encodedName;
         CreateSessionResponse response = new CreateSessionResponse();
         connection.fetchJSONInto(resource, response);
 
         SessionToken sessionToken = new SessionToken(response.getLocalSessionToken());
         String displayName = response.getDisplayName();
         String shareCode = response.getShareCode();
-        return new LocalSession(connection, sessionToken, displayName, shareCode);
+
+        LocalSession session = new LocalSession(connection, sessionToken, displayName, shareCode);
+
+        sessions.add(session);
+
+        return session;
     }
 
     public CompletionStage<Session> createSessionWithNameAsync(String name) {
@@ -129,16 +136,34 @@ public class LocalPlayer extends Player {
         });
     }
 
+    /**
+     * Returns null if we are already in this session
+     * @param sessionCode
+     * @return
+     */
     public Session joinSessionWithCode(String sessionCode) {
+        String code = URLEncoder.encode(sessionCode);
         String resource = "/joinSession.json?connection=" + connection.getConnectionToken()
-                + "&localPlayer=" + playerToken + "&sessionCode=" + sessionCode;
+                + "&localPlayer=" + playerToken + "&sessionCode=" + code;
         JoinSessionResponse response = new JoinSessionResponse();
         connection.fetchJSONInto(resource, response);
 
         SessionToken sessionToken = new SessionToken(response.getLocalSessionToken());
+
+        // Are we already in this session?
+        for (Session s : sessions) {
+            if (sessionToken.equals(s.getSessionToken())) {
+                return null;
+            }
+        }
+
         String displayName = response.getDisplayName();
         String shareCode = response.getShareCode();
-        return new LocalSession(connection, sessionToken, displayName, shareCode);
+        LocalSession session = new LocalSession(connection, sessionToken, displayName, shareCode);
+
+        sessions.add(session);
+
+        return session;
     }
 
     public CompletionStage<Session> joinSessionWithCodeAsync(String sessionCode) {
