@@ -1,5 +1,6 @@
 package org.multiplay.client;
 
+import org.multiplay.JSONSerializable;
 import org.multiplay.SessionToken;
 import org.multiplay.client.response.SessionPlayersResponse;
 
@@ -12,6 +13,8 @@ public class Session {
     private final Connection connection;
     private final SessionToken sessionToken;
     private String displayName = "";
+
+    private List<Player> players = new ArrayList<>();
 
     Session(Connection connection, SessionToken sessionToken, String displayName) {
         this.connection = connection;
@@ -39,6 +42,12 @@ public class Session {
         return connection.fetchJSONIntoAsync(resource, new SessionPlayersResponse()).thenApply(response -> {
             List<Player> players = new ArrayList<>();
 
+            for (String displayName : response.getPlayers()) {
+                players.add(new Player(displayName));
+            }
+
+            this.players = players;
+
             return players;
         });
     }
@@ -49,6 +58,10 @@ public class Session {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public List<Player> getPlayers() {
+        return players;
     }
 
     @Override

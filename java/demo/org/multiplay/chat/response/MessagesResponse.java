@@ -1,6 +1,6 @@
 package org.multiplay.chat.response;
 
-import org.multiplay.client.JSONSerializable;
+import org.multiplay.JSONSerializable;
 
 import java.util.ArrayList;
 import java.util.List;

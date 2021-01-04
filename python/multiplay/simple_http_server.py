@@ -155,7 +155,7 @@ class ServerInstance(object):
 
     def listsessionplayers(self, handler, connection, session):
         print("LIST players for session %s ON connection %s " % (session, connection))
-        players = []
+        players = self.__db.listSessionPlayers(connection, session)
         return { "players" : players }
 
     def listplayersessions(self, handler, connection, localPlayer):

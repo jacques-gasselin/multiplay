@@ -1,4 +1,4 @@
-package org.multiplay.client;
+package org.multiplay;
 
 public interface JSONSerializable {
     String toJSONString();

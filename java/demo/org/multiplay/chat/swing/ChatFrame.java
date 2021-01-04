@@ -60,7 +60,7 @@ public class ChatFrame extends JFrame implements UserInterface {
         configurePanes();
         layoutPanes();
 
-        Timer timer = new Timer(5 * 1000, event -> {
+        Timer timer = new Timer(25 * 1000, event -> {
             updateMessages();
         });
         timer.start();
@@ -80,6 +80,9 @@ public class ChatFrame extends JFrame implements UserInterface {
             int index = channelsList.getSelectedIndex();
             localSession = sessions.get(index);
             System.out.println("selected channel " + localSession);
+            localSession.fetchPlayersAsync().thenAccept(players -> {
+                System.out.println(localSession + " players " + players);
+            });
             updateMessages();
         });
 
@@ -265,11 +268,6 @@ public class ChatFrame extends JFrame implements UserInterface {
     @Override
     public void updateChannels() {
         player.fetchSessionsAsync().thenAccept(sessions -> {
-            for (Session s : sessions) {
-                s.fetchPlayersAsync().thenAccept(players -> {
-                    System.out.println(s + " players " + players);
-                });
-            }
             SwingUtilities.invokeLater(() -> {
                 channelsListModel.clear();
                 for (Session session : sessions) {
