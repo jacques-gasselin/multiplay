@@ -196,13 +196,26 @@ public class ChatFrame extends JFrame implements UserInterface {
 
     private void logInOrOut() {
         if (player.isAuthenticated()) {
-            // TODO: logout
+            // Login as a new user
+            LoginGlassPane.showInput(this).thenAccept(pane -> {
+                if (pane.getOption() == JOptionPane.OK_OPTION) {
+                    String username = pane.getUsername();
+                    String password = pane.getPassword();
+                    LocalPlayer p = player.httpAuthenticate(username, password);
+                    updatePlayer(p);
+                }
+            });
         }
         else {
-            // TODO: dialog
-            String username = "fiddle";
-            String password = "sticks";
-            player.httpAuthenticate(username, password);
+            // Convert guest account to real account
+            LoginGlassPane.showInput(this).thenAccept(pane -> {
+                if (pane.getOption() == JOptionPane.OK_OPTION) {
+                    String username = pane.getUsername();
+                    String password = pane.getPassword();
+                    LocalPlayer p = player.httpAuthenticate(username, password);
+                    updatePlayer(p);
+                }
+            });
         }
     }
 
@@ -212,7 +225,7 @@ public class ChatFrame extends JFrame implements UserInterface {
         playerName.setText(player.getDisplayName());
         if (player.isAuthenticated()) {
             guestLabel.setVisible(false);
-            loginButton.setText("Logout");
+            loginButton.setText("Change");
         }
         else {
             guestLabel.setVisible(true);
