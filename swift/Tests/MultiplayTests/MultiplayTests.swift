@@ -6,7 +6,7 @@ final class MultiplayTests: XCTestCase {
     func testLogin() {
         let gameUUID = UUID().uuidString
         let baseUrl = "http://localhost:12345"
-        let connection = MPConnection(gameUUID:gameUUID, baseUrl:baseUrl)
+        let connection = Connection(gameUUID:gameUUID, baseUrl:baseUrl)
         XCTAssertTrue(connection.connect())
         XCTAssertTrue(connection.isConnected)
         let localPlayer = connection.login()
