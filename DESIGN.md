@@ -25,6 +25,28 @@ The Client - Server connection is based on a few base types
  Port       | [0,2^32] | A port number to combine with an IPAddress for a socket connection
   [Client-Server types]
 
+Response Formats
+================
+
+All URL requests support an option argument *response* (encoded as the suffix of the endpoint). If the format is omitted the type is assumed to be binary and
+the response is pure bytes.
+
+Supported formats:
+
+- `.json`
+- `.plist`
+
+### Examples
+
+For a JSON response you would add the `.json` suffix to the endpoint.
+> /connect.json?game=gameUUID
+
+For a plist response you would add the `.plist` suffix to the endpoint. 
+> /connect.plist?game=gameUUID
+
+For a pure bytes response you would omit a suffix for the endpoint.
+> /connect?game=gameUUID
+
 Connect the Game
 =================
 
@@ -65,15 +87,6 @@ Client Side:
   <string>UUID</string>
 </dict>
 ~~~
-
-!!! note
-   All URL requests support an option argument *response* (encoded as the suffix of the endpoint),
-   which is either *plist* or *json*. If the format is omitted the type is assumed to be binary and
-   the response is pure bytes.
-   
-   /connect(.plist|.json)?game=$gameUUID
-
-
 
 Server Side:
 
