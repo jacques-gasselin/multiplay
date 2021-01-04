@@ -13,6 +13,10 @@ public class Player {
         return displayName;
     }
 
+    protected final void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
     @Override
     public String toString() {
         return displayName;

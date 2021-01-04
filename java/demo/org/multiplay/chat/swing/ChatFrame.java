@@ -86,6 +86,10 @@ public class ChatFrame extends JFrame implements UserInterface {
             updateMessages();
         });
 
+        loginButton.addActionListener(actionEvent -> {
+            logInOrOut();
+        });
+
         addChannelButton.setMinimumSize(buttonSize);
         addChannelButton.setPreferredSize(buttonSize);
         addChannelButton.setMaximumSize(buttonSize);
@@ -188,6 +192,18 @@ public class ChatFrame extends JFrame implements UserInterface {
         frame.setSize(800, 600);
         frame.start(args);
         frame.setVisible(true);
+    }
+
+    private void logInOrOut() {
+        if (player.isAuthenticated()) {
+            // TODO: logout
+        }
+        else {
+            // TODO: dialog
+            String username = "fiddle";
+            String password = "sticks";
+            player.httpAuthenticate(username, password);
+        }
     }
 
     @Override

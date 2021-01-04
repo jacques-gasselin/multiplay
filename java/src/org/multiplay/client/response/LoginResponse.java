@@ -36,12 +36,12 @@ public final class LoginResponse {
         return authenticated;
     }
 
-    public String getAuthenticated() {
-        return authenticated ? "true" : "false";
+    public int getAuthenticated() {
+        return authenticated ? 1 : 0;
     }
 
-    public void setAuthenticated(String trueOrFalse) {
-        if (trueOrFalse != null && trueOrFalse.equalsIgnoreCase("true")) {
+    public void setAuthenticated(int nonzero) {
+        if (nonzero != 0) {
             this.authenticated = true;
         } else {
             this.authenticated = false;

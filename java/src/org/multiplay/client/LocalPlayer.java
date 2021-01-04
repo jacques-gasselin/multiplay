@@ -7,8 +7,7 @@ import org.multiplay.SessionToken;
 import org.multiplay.client.response.*;
 
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -189,6 +188,37 @@ public class LocalPlayer extends Player {
         return CompletableFuture.supplyAsync(() -> {
             addFriendWithCode(friendCode);
             return null;
+        });
+    }
+
+    public LocalPlayer httpAuthenticate(String username, String password) {
+        String resource = "/httpAuthenticate.json?connection=" + connection.getConnectionToken()
+                + "&localPlayer=" + playerToken;
+        LoginResponse response = new LoginResponse();
+        response.setDisplayName(getDisplayName());
+        response.setFriendCode(friendCode);
+        response.setAuthenticated(authenticated ? 1 : 0);
+
+        HashMap<String, String> properties = new HashMap<>();
+        String concat = username + ":" + password;
+        String value = "Basic " + new String(Base64.getEncoder().encode(concat.getBytes()));
+        properties.put("Authorization", value);
+
+        connection.fetchJSONInto(resource, response, properties);
+
+        setDisplayName(response.getDisplayName());
+        friendCode = response.getFriendCode();
+        authenticated = response.isAuthenticated();
+
+        return this;
+    }
+
+    public CompletionStage<LocalPlayer> httpAuthenticateAsync(String username, String password) {
+        if (connection.isVerboseLoggingEnabled()) {
+            System.out.println("LocalPlayer.authenticateAsync(" + username + ", ...)");
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            return httpAuthenticate(username, password);
         });
     }
 }

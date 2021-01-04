@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.net.NetworkInterface;
 import java.net.URL;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
 
@@ -113,6 +114,10 @@ public abstract class Connection {
     }
 
     <T> T fetchJSONInto(String resource, T response) {
+        return fetchJSONInto(resource, response, null);
+    }
+
+    <T> T fetchJSONInto(String resource, T response, Map<String, String> properties) {
         String protocol = serverURL.getProtocol();
         String host = serverURL.getHost();
         int port = serverURL.getPort();
@@ -124,6 +129,12 @@ public abstract class Connection {
                 System.out.println(fetchURL);
             }
             conn = (HttpURLConnection) fetchURL.openConnection();
+            if (properties != null) {
+                final HttpURLConnection c = conn;
+                properties.forEach((key, value) -> {
+                    c.setRequestProperty(key, value);
+                });
+            }
             // grab the response as JSON and get the player token and data
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
                 try {
