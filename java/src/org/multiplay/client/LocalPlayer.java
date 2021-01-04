@@ -71,9 +71,6 @@ public class LocalPlayer extends Player {
     }
 
     public CompletionStage<List<Friend>> fetchFriendsAsync() {
-        if (connection.isVerboseLoggingEnabled()) {
-            System.out.println("LocalPlayer.fetchFriendsAsync()");
-        }
         return CompletableFuture.supplyAsync(() -> {
             return fetchFriends();
         });
@@ -100,9 +97,6 @@ public class LocalPlayer extends Player {
     }
 
     public CompletionStage<List<LocalSession>> fetchSessionsAsync() {
-        if (connection.isVerboseLoggingEnabled()) {
-            System.out.println("LocalPlayer.fetchSessionsAsync()");
-        }
         return CompletableFuture.supplyAsync(() -> {
             return fetchSessions();
         });
@@ -127,9 +121,6 @@ public class LocalPlayer extends Player {
     }
 
     public CompletionStage<Session> createSessionWithNameAsync(String name) {
-        if (connection.isVerboseLoggingEnabled()) {
-            System.out.println("LocalPlayer.createSessionWithNameAsync(" + name + ")");
-        }
         return CompletableFuture.supplyAsync(() -> {
             return createSessionWithName(name);
         });
@@ -166,9 +157,6 @@ public class LocalPlayer extends Player {
     }
 
     public CompletionStage<Session> joinSessionWithCodeAsync(String sessionCode) {
-        if (connection.isVerboseLoggingEnabled()) {
-            System.out.println("LocalPlayer.joinSessionWithCodeAsync(" + sessionCode + ")");
-        }
         return CompletableFuture.supplyAsync(() -> {
             return joinSessionWithCode(sessionCode);
         });
@@ -182,9 +170,6 @@ public class LocalPlayer extends Player {
     }
 
     public CompletionStage<Void> addFriendWithCodeAsync(String friendCode) {
-        if (connection.isVerboseLoggingEnabled()) {
-            System.out.println("LocalPlayer.addFriendWithCodeAsync(" + friendCode + ")");
-        }
         return CompletableFuture.supplyAsync(() -> {
             addFriendWithCode(friendCode);
             return null;
@@ -214,9 +199,6 @@ public class LocalPlayer extends Player {
     }
 
     public CompletionStage<LocalPlayer> httpAuthenticateAsync(String username, String password) {
-        if (connection.isVerboseLoggingEnabled()) {
-            System.out.println("LocalPlayer.authenticateAsync(" + username + ", ...)");
-        }
         return CompletableFuture.supplyAsync(() -> {
             return httpAuthenticate(username, password);
         });

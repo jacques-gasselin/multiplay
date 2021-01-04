@@ -97,7 +97,7 @@ public abstract class Connection {
                 try (InputStream is = conn.getInputStream()) {
                     int success = is.read();
                     if (isVerboseLoggingEnabled()) {
-                        System.out.println(success);
+                        System.out.println("-> " + success);
                     }
                 }
             }
@@ -145,7 +145,7 @@ public abstract class Connection {
                 }
 
                 if (isVerboseLoggingEnabled()) {
-                    System.out.println(response);
+                    System.out.println("-> " + response);
                 }
             }
         }
@@ -171,9 +171,6 @@ public abstract class Connection {
      * @return {Promise} a promise that is fulfilled when the game is connected.
      */
     public CompletionStage<Connection> connectAsync() {
-        if (isVerboseLoggingEnabled()) {
-            System.out.println("Connection.connectAsync()");
-        }
         return CompletableFuture.supplyAsync(() -> {
             String resource = "/connect.json?game=" + gameToken;
             ConnectionResponse response = new ConnectionResponse();
@@ -184,10 +181,6 @@ public abstract class Connection {
     }
 
     public LocalPlayer login() {
-        if (isVerboseLoggingEnabled()) {
-            System.out.println("Connection.login()");
-        }
-
         String resource = "/login.json?connection=" + connectionToken.toString() + "&localDevice=" + deviceToken.toString();
         LoginResponse response = new LoginResponse();
         fetchJSONInto(resource, response);
@@ -196,10 +189,6 @@ public abstract class Connection {
     }
 
     public CompletionStage<LocalPlayer> loginAsync() {
-        if (isVerboseLoggingEnabled()) {
-            System.out.println("Connection.loginAsync()");
-        }
-
         return CompletableFuture.supplyAsync(() -> {
             return login();
         }, executor);
