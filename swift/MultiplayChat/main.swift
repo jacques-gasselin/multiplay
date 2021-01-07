@@ -111,9 +111,11 @@ struct ChatView: View {
     @State var channelSessions: [Session] = []
     @State var channelCodes: [String] = []
     
+    @State var currentSession: Session?
+    
     @State var friends: [String] = [ "Foo", "Baz" ]
 
-    var messages: [Message] = []
+    @State var messages: [Message] = []
 
     init() {
     }
@@ -271,7 +273,7 @@ struct ChatView: View {
     func activateChannel(name: String) ->() ->() {
         return {
             guard let index = channels.firstIndex(of: name) else { return }
-            let session = channelSessions[index]
+            currentSession = channelSessions[index]
         }
     }
 
@@ -284,8 +286,21 @@ struct ChatView: View {
         channels.append(session.displayName!)
         channelSessions.append(session)
         channelCodes.append(name)
-        
+        currentSession = session
         friends = session.players
+    }
+    
+    func refreshMessages() {
+        guard let session = currentSession else { return }
+        guard let connection = connection else { return }
+        guard let baseUrl = connection.baseUrl else { return }
+        guard let data = session.fetchDataAsJson(url: URL(string: baseUrl)) else { return }
+        let currentMessages = data["messages"]
+        messages = []
+        let user = User(name:"Foo", avatar: "F", isCurrentUser: true)
+        for message in currentMessages {
+            messages.append(Message(content:message.1.string ?? "???", user:user))
+        }
     }
 
 }
