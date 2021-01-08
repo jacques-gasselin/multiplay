@@ -344,6 +344,7 @@ def run(port, useSSL = False):
             else:
                 print("serving at http://localhost:%i" % port)
                 print("chat client at http://localhost:%i/application/chat.html" % port)
+                print("tictactoe at http://localhost:%i/application/tictactoe.html" % port)
             __httpd = httpd
             currentFilePath = os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
             httpd.site_root_path = os.path.realpath(os.path.join(currentFilePath, '..', '..', '..', 'www'))
