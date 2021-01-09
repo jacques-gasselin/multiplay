@@ -9,10 +9,20 @@
         <script src="tictactoe.js"></script>
     </head>
     <body onload="load()">
-        <div align="center" id="gameTitle">Player vs Opponent</div>
-        <br/>
-        <div align="center">
-            <canvas id="gameCanvas" width="256" height="256"></canvas>
+        <div class="left" id="menu">
+            <p id="playerName"><button id="loginButton" onclick="loginPressed()">Login</button> Player</p>
+            <p>Games <button onclick="newGamePressed()">New</button></p>
+            <ul id="gamesList">
+                <li>Game1 <button>-></button></li>
+                <li>Game2 <button>-></button></li>
+            </ul>
+        </div>
+        <div class="right">
+            <div align="center" id="gameTitle">Player vs Opponent</div>
+            <br/>
+            <div align="center">
+                <canvas id="gameCanvas" width="256" height="256"></canvas>
+            </div>
         </div>
     </body>
 </html>

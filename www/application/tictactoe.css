@@ -1,3 +1,31 @@
 #gameCanvas {
 
 }
+
+body {
+    display: grid;
+    grid-template-rows: auto;
+    grid-template-columns: 250px 300px;
+}
+
+.left {
+    left: 0;
+    height: inherit;
+    text-rendering: optimizeLegibility;
+    font-smooth: always;
+    font-smoothing: antialiased;
+    -moz-font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.right {
+    overflow: auto;
+    height: inherit;
+    text-rendering: optimizeLegibility;
+    font-smooth: always;
+    font-smoothing: antialiased;
+    -moz-font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
