@@ -37,3 +37,5 @@ To test out the Swift bindings you can run the following at the project root.
 
 > swift run
 
+To use the Swift port, point the Swift Package Manager at this repository's github URL, and specify the master branch.
+
