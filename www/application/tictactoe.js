@@ -15,6 +15,61 @@ class Game {
         this.board = new Board();
         this.playerIsX = true;
     }
+
+    isRangeAWinForPlayer(player, startIndex, step) {
+        if (player == 0) {
+            return false;
+        }
+        for (var i = 0; i < 3; ++i) {
+            let index = startIndex + i * step;
+            if (this.board.points[index] != player) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    didPlayerWin(player) {
+        // each row
+        for (var row = 0; row < 3; ++row) {
+            if (this.isRangeAWinForPlayer(player, row * 3, 1)) {
+                return true;
+            }
+        }
+        // each column
+        for (var col = 0; col < 3; ++col) {
+            if (this.isRangeAWinForPlayer(player, col, 3)) {
+                return true;
+            }
+        }
+        // each diagonal
+        if (this.isRangeAWinForPlayer(player, 0, 4)) {
+            return true;
+        }
+        if (this.isRangeAWinForPlayer(player, 2, 2)) {
+            return true;
+        }
+        return false;
+    }
+
+    isTied() {
+        for (var p in this.board.points) {
+            if (p == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    isGameOver() {
+        if (this.didPlayerWin(1)) {
+            return true;
+        }
+        if (this.didPlayerWin(2)) {
+            return true;
+        }
+        return this.isTied();
+    }
 }
 
 var currentGame = new Game("Default");
@@ -36,8 +91,10 @@ function loginPressed() {
 function newGamePressed() {
     let name = prompt("Game name")
     connection.getLocalPlayer().createSessionWithName(name)
-    .then(newChannel => {
+    .then(s => {
         updateGameSessions();
+        currentSession = s;
+        updateGameForSession(s);
     });
 }
 
@@ -109,6 +166,22 @@ function updatePlayer(player) {
     window.requestAnimationFrame(draw);
 }
 
+function makeMoveAtIndex(index) {
+    if (currentGame.isGameOver()) {
+        return;
+    }
+
+    let points = currentGame.board.points;
+
+    if (points[index] == 0) {
+        points[index] = currentGame.playerIsX ? 1 : 2;
+        currentGame.playerIsX = !currentGame.playerIsX;
+        currentSession.sendObjectAsJSONData(currentGame);
+
+        requestAnimationFrame(draw);
+    }
+}
+
 function mouseDown(event) {
     let x = event.offsetX;
     let y = event.offsetY;
@@ -120,14 +193,7 @@ function mouseDown(event) {
 
     let index = j * 3 + i;
 
-    let points = currentGame.board.points;
-
-    if (points[index] == 0) {
-        points[index] = currentGame.playerIsX ? 1 : 2;
-        currentGame.playerIsX = !currentGame.playerIsX;
-        currentSession.sendObjectAsJSONData(currentGame);
-        requestAnimationFrame(draw);
-    }
+    makeMoveAtIndex(index);
 }
 
 function keyDown(event) {
@@ -138,7 +204,7 @@ function keyUp(event) {
 
 }
 
-function drawBoard(g, board, x, y, width, height) {
+function drawBoard(g, game, x, y, width, height) {
     g.beginPath();
     g.moveTo(width / 3, 0);
     g.lineTo(width / 3, height);
@@ -156,7 +222,7 @@ function drawBoard(g, board, x, y, width, height) {
 
     for (var j = 0; j < 3; ++j) {
         for (var i = 0; i < 3; ++i) {
-            if (board.points[j * 3 + i] == 1) {
+            if (game.board.points[j * 3 + i] == 1) {
                 g.beginPath();
                 g.moveTo(i * cellSize + 3, j * cellSize + 3);
                 g.lineTo((i + 1) * cellSize - 3, (j + 1) * cellSize - 3);
@@ -164,13 +230,51 @@ function drawBoard(g, board, x, y, width, height) {
                 g.lineTo(i * cellSize + 3, (j + 1) * cellSize - 3);
                 g.stroke();
             }
-            else if (board.points[j * 3 + i] == 2) {
+            else if (game.board.points[j * 3 + i] == 2) {
                 g.beginPath();
                 g.arc(i * cellSize + cellSize / 2, j * cellSize + cellSize / 2, cellSize / 2 - 4, 0, 2 * Math.PI, true);
                 g.stroke();
             }
         }
     }
+
+    // draw winning strikethroughs
+
+    for (var player = 1; player <= 2; ++player) {
+        for (var row = 0; row < 3; ++row) {
+            if (game.isRangeAWinForPlayer(player, row * 3, 1)) {
+                g.beginPath();
+                g.moveTo(0, row * cellSize + cellSize / 2);
+                g.lineTo(3 * cellSize, row * cellSize + cellSize / 2);
+                g.stroke();
+            }
+        }
+        for (var col = 0; col < 3; ++col) {
+            if (game.isRangeAWinForPlayer(player, col, 3)) {
+                g.beginPath();
+                g.moveTo(col * cellSize + cellSize / 2, 0);
+                g.lineTo(col * cellSize + cellSize / 2, 3 * cellSize);
+                g.stroke();
+            }
+        }
+
+        if (game.isRangeAWinForPlayer(player, 0, 4)) {
+            g.beginPath();
+            g.moveTo(0, 0);
+            g.lineTo(width, height);
+            g.stroke();
+        }
+
+        if (game.isRangeAWinForPlayer(player, 2, 2)) {
+            g.beginPath();
+            g.moveTo(width, 0);
+            g.lineTo(0, height);
+            g.stroke();
+        }
+    }
+
+
+
 }
 
 function draw(timestamp) {
@@ -187,7 +291,7 @@ function draw(timestamp) {
 
     g.clearRect(0, 0, width, height);
 
-    drawBoard(g, currentGame.board, 0, 0, width, height);
+    drawBoard(g, currentGame, 0, 0, width, height);
 }
 
 function load() {
