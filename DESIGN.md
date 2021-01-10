@@ -47,6 +47,20 @@ For a plist response you would add the `.plist` suffix to the endpoint.
 For a pure bytes response you would omit a suffix for the endpoint.
 > /connect?game=gameUUID
 
+HTTP Request Methods
+====================
+
+The following request methods are supported. Each has a specific purpose and should only be used for that express purpose.
+
+Method      | Use
+------------|---------------------------
+GET         |  Reads an entry from an endpoint
+POST        |  Appends or adds to an entry at an endpoint
+PUT         |  Replaces an entry at an endpoint
+DELETE      |  Removes an entry at an endpoint
+CONNECT     |  For session P2P connection only.  
+
+
 Connect the Game
 =================
 
@@ -68,7 +82,7 @@ Client Side:
    *URL Request*
 
 ~~~ http
-/connect?game=$gameUUID
+GET /connect?game=$gameUUID HTTP/1.0
 ~~~
 
    *Response*:
@@ -134,7 +148,7 @@ Client Side:
    *URL Request*
 
 ~~~ http
-/login?connection=$connectionToken&localDevice=$localDeviceUUID
+GET /login?connection=$connectionToken&localDevice=$localDeviceUUID HTTP/1.0
 ~~~
 
    *Response*:
@@ -178,24 +192,30 @@ Server Side:
       This involves selecting from the playerByDevice Table and returning a token for the last used
       player for that device.
       Or if there are no players associated with that device returning a new one.
-!!! note
-    There may be multiple tokens for a single player. Such that play can begin under one
-    anonymous player and then be merged by some authenticated login to another existing player.
-    This is a common game affordace to avoid locking a player into a login flow when they first start a game.
+
+>    There may be multiple tokens for a single player. Such that play can begin under one
+>    anonymous player and then be merged by some authenticated login to another existing player.
+>    This is a common game affordance to avoid locking a player into a login flow when they first start a game.
 
 This flow relies on the game being able to provide a stable UUID for the device. If a user has chose to forget settings on the device the UUID should have been regenerated and a new anonymous login would occurr.
 
 Write Data for the Local Player
 ================================
 
-A game will often want to write data for the local player in the cloud. With a valid connectionToken and localPlayerToken we should be abe to save a binary blob of data.
+A game will often want to write data for the local player in the cloud.
+With a valid connectionToken and localPlayerToken we should be abe to save a binary blob of data.
+This completely replaces the data that was there before.
 
 Client Side:
 
    *URL Request*:
 
+PUT
 ~~~ http
-/writePlayerData?connection=$connectionToken&localPlayer=$localPlayerToken&data=$data
+PUT /playerData HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+
+connection=$connectionToken&localPlayer=$localPlayerToken&data=$data
 ~~~
 
    *Reponse*
@@ -220,6 +240,47 @@ Client Side:
 </dict>
 ~~~
 
+Append Data for the Local Player
+================================
+
+A game will often want to just modify or append some data for the local player in the cloud.
+With a valid connectionToken and localPlayerToken we should be abe to save a binary blob of data.
+This appends or composes with the data that was there before.
+
+Client Side:
+
+*URL Request*:
+
+POST
+~~~ http
+POST /playerData HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+
+connection=$connectionToken&localPlayer=$localPlayerToken&data=$data
+~~~
+
+*Reponse*
+
+status : Boolean
+
+binary
+~~~ binary
+   0 | 1
+~~~
+
+json
+~~~ json
+{ "status" : (0|1) }
+~~~
+
+plist
+~~~ xml
+<dict>
+  <key>status</key>
+  <true|false />
+</dict>
+~~~
+
 Read Data for the Local Player
 =================================
 
@@ -230,7 +291,7 @@ Client Side:
    *URL Request*:
 
 ~~~ http
-/readPlayerData?connection=$connectionToken&localPlayer=$localPlayerToken
+GET /playerData?connection=$connectionToken&localPlayer=$localPlayerToken HTTP/1.0
 ~~~
 
    *Response*
@@ -257,6 +318,40 @@ Client Side:
 
 The returned data will be empty if there was no data to retrieve. The potential for an error in the connection may be needed too to have a status.
 
+Delete Data for the Local Player
+================================
+
+Removes local player data for the game.
+
+Client Side:
+
+*URL Request*:
+
+~~~ http
+DELETE /playerData?connection=$connectionToken&localPlayer=$localPlayerToken HTTP/1.0
+~~~
+
+*Reponse*
+
+status : Boolean
+
+binary
+~~~ binary
+   0 | 1
+~~~
+
+json
+~~~ json
+{ "status" : (0|1) }
+~~~
+
+plist
+~~~ xml
+<dict>
+  <key>status</key>
+  <true|false />
+</dict>
+~~~
 
 Starting a Session
 ==================
@@ -268,7 +363,10 @@ Client Side:
    *URL Request*
    
 ~~~ http
-   /createSession?connection=$connectionToken&localPlayer=$localPlayerToken
+POST /sessions HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+
+connection=$connection&localPlayer=$localPlayer&displayName=$displayName
 ~~~
    
    *Response*
@@ -304,48 +402,99 @@ Server Side:
 Get List of Sessions for the Local Player
 =========================================
 
-Get the sessions that the player is in currently. This may be session the player created or another player created and then added the local the player to.
+Get the sessions that the player is in currently.
+This may be session the player created or another player created and then added the local the player to.
 
 Client Side:
 
    *URL Request*
    
 ~~~ http
-   /listSessions?connection=$connectionToken&localPlayer=$localPlayerToken
+GET /sessions?connection=$connectionToken&localPlayer=$localPlayerToken HTTP/1.0
 ~~~
 
    *Response*
 
    sessionTokens : List<UUID>
 
-Write State to a Session
-========================
+Leave a session and destroy if empty
+====================================
 
-Write data to a key for the session.
+Leave a session that the local player is in. If that session is
+now empty; remove it from the server.
 
 Client Side:
 
    *URL Request*
-    
+
 ~~~ http
-   /writeSessionDataForKey?connection=$connectionToken&session=$sessionToken&key=$key&data=$data
+DELETE /sessions?connection=$connectionToken&localPlayer=$localPlayerToken&session=$sessionToken HTTP/1.0
 ~~~
 
    *Response*
 
    status : Boolean
 
-Read State from a Session
+Write State to a Session
+========================
+
+Write data to a key for the session.
+
+The `key` argument is optional. If `key` is missing an empty key is used.
+
+An empty key is a valid and can be used for session wide state.
+
+Client Side:
+
+   *URL Request*
+    
+~~~ http
+PUT /sessionData HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+
+connection=$connectionToken&session=$sessionToken&key=$key&data=$data
+~~~
+
+   *Response*
+
+   status : Boolean
+
+Append State to a Session
 =========================
 
-Read data from a key for the session.
+Appends data to the session data for `key`. 
 
 Client Side:
 
    *URL Request*
 
 ~~~ http
-   /readSessionDataForKey?connection=$connectionToken&session=$sessionToken&key=$key
+POST /sessionData HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+
+connection=$connectionToken&session=$sessionToken&key=$key&data=$data
+~~~
+
+   *Response*
+
+   status : Boolean
+
+
+Read State from a Session
+=========================
+
+Read data from a key for the session.
+
+The `key` argument is optional. If `key` is missing an empty key is used.
+
+An empty key is a valid and can be used for session wide state.
+
+Client Side:
+
+   *URL Request*
+
+~~~ http
+GET /sessionData?connection=$connectionToken&session=$sessionToken&key=$key HTTP/1.0
 ~~~
 
    *Response*
@@ -362,14 +511,16 @@ Client Side:
    *URL Request*
 
 ~~~ http
-   /addPlayerToSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
+POST /sessionPlayers HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+
+connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
 ~~~
    *Response*
    
    status : Boolean
 
-!!! note
-   *remotePlayerToken* is the token of a player other than the local player to add to the session.
+>   `remotePlayerToken` is the token of a player other than the local player to add to the session.
 
 Remove a player from a session
 ==============================
@@ -379,15 +530,14 @@ Client Side:
    *URL Request*
 
 ~~~ http
-   /removePlayerFromSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
+DELETE /sessionPlayers?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
 ~~~
 
    *Response*
 
    status : Boolean
 
-!!! note
-   *remotePlayerToken* is the token of a player other than the local player to remove from the session.
+>   `remotePlayerToken` is the token of a player other than the local player to remove from the session.
 
 
 Create Peer-to-Peer Connection with Player in Session
@@ -398,7 +548,7 @@ Client Side:
    *URL Request*
    
 ~~~ http
-   /connectToPlayerInSession?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
+CONNECT /sessionPlayers?connection=$connectionToken&session=$sessionToken&player=$remotePlayerToken
 ~~~
    
    *Response*
@@ -407,8 +557,7 @@ Client Side:
    port : Port
    INETADDR
 
-!!! note
-   *remotePlayerToken* is the token of a player other than the local player to directy connect to.
+>   `remotePlayerToken` is the token of a player other than the local player to directy connect to.
 
 This connection may be truly peer-to-peer but if reachability is an issue it may be tunneled through a STUN or TURN server. An implementation detail the client does not need to worry about.
 
