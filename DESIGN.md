@@ -16,12 +16,12 @@ The Client - Server connection is based on a few base types
 
  Name       | Range    | Description
 ------------|----------|-----------------
- Boolean    |  [0, 1]  | 0=False, !0=True
- String     |  char[]  | A variable length array of unicode characters.
+ Boolean    |  [0, 1]  | 0=False, 1=True
+ String     |  char[]  | A variable length array of utf8 characters.
  Data       |  byte[]  | A variable length array of bytes.
- UUID       |  Base16  | 128bit UUID, represented as 32 hexadecimals in URLs, or 8 bytes when connected via a socket
+ UUID       |  Base16  | 128bit UUID, represented as 32 hexadecimals in URLs, or 16 bytes when connected via a socket
  List<UUID> |   N/A    | A comma separated list of UUIDs.
- IPAddress  |  IPv6    | 128bit unsigned number, as 32 hexadecimals grouped in to 4 digits separated by colons, or 8 bytes when connected via a socket
+ IPAddress  |  IPv6    | 128bit unsigned number, as 32 hexadecimals grouped in to 4 digits separated by colons, or 16 bytes when connected via a socket
  Port       | [0,2^32] | A port number to combine with an IPAddress for a socket connection
   [Client-Server types]
 
@@ -91,7 +91,7 @@ GET /connect?game=$gameUUID HTTP/1.0
    
    json
 ~~~ json
-{ "connectionToken" : UUID }
+{ "connectionToken" : "$UUID" }
 ~~~
 
    plist
@@ -106,21 +106,21 @@ Server Side:
 
  1. Lookup game UUID in database
  1. If not found return an empty UUID
- 1. If found generate a connection UUID, that does not clash with other current or stale connnections, with a timeout
- 1. Clear out all stale connections for the game UUID
- 1. Return the connection UUID
+ 1. If found, generate a connection UUID, subject to a timeout. The UUID will not clash with other current or stale connnections
+ 1. Clear out any stale connections for the game UUID
+ 1. Return the new connection UUID
 
 This handshake allows the server to manage load and by assigning tokens
 it can ensure that only active connections are serviced in case of
 rogue clients.
 
-A server may choose to allow connections for games that are not already registered. This is great for development of games or for learning focused platforms that want to offer multiplayer services.
+A server may choose to allow connections for games that are not already registered. This is intended for development of games or for learning focused platforms that want to offer multiplayer services.
 
 Connect the Local Player
 ========================
 
 Use the GameConnectionToken to create a player, or fetch the last used player, with the localDeviceUUID.
-For iOS this would be the same as [[UIDevice currentDevice].identifierForVendor UUIDString]
+As an example, on iOS the localDeviceUUID can be generated as [[UIDevice currentDevice].identifierForVendor UUIDString]
 
 ```
 ****************************************************************
@@ -158,9 +158,9 @@ GET /login?connection=$connectionToken&localDevice=$localDeviceUUID HTTP/1.0
    json
 ~~~ json
 {
-  "localPlayerToken" : UUID,
-  "displayName" : String,
-  "friendCode" : String
+  "localPlayerToken" : "$UUID",
+  "displayName" : "$name",
+  "friendCode" : "$code"
 }
 ~~~
    
@@ -183,21 +183,21 @@ Server Side:
    FROM playerTokenConnectionTimeAndDeviceUUIDByConnectionToken AS P
    WHERE P.connectionToken = $connectionToken
 ~~~
-   1. Resolve if there are stale connections based on the connection time being stale.
+   1. Resolve stale connections; determined by an activity timeout expiry.
       Remove the stale connections from the table so that no more requests are serviced on
       a stale connection
-   1. If there are multiple connections invalidate all that are not for the given device id
+   1. If there are multiple connections, invalidate all that are not for the given device id
    1. If there is a valid connection for the given device return that and refresh the connection time.
-   1. If there are no connections insert a new unique one into the table and return that playerToken.
+   1. If there are no connections insert, a new unique connection into the table and return the playerToken.
       This involves selecting from the playerByDevice Table and returning a token for the last used
       player for that device.
-      Or if there are no players associated with that device returning a new one.
+      Or if there are no players associated with that device, return a new player.
 
->    There may be multiple tokens for a single player. Such that play can begin under one
+>    There may be multiple tokens for a single player. This allows that play can begin under one
 >    anonymous player and then be merged by some authenticated login to another existing player.
 >    This is a common game affordance to avoid locking a player into a login flow when they first start a game.
 
-This flow relies on the game being able to provide a stable UUID for the device. If a user has chose to forget settings on the device the UUID should have been regenerated and a new anonymous login would occurr.
+This flow relies on the game being able to provide a stable UUID for the device. If a user has chosen to forget settings on the device, the UUID should have been regenerated and a new anonymous login would occur.
 
 Write Data for the Local Player
 ================================
@@ -228,7 +228,7 @@ connection=$connectionToken&localPlayer=$localPlayerToken&data=$data
 ~~~
    
    json
-~~~ json
+~~~
 { "status" : (0|1) }
 ~~~
 
@@ -244,8 +244,8 @@ Append Data for the Local Player
 ================================
 
 A game will often want to just modify or append some data for the local player in the cloud.
-With a valid connectionToken and localPlayerToken we should be abe to save a binary blob of data.
-This appends or composes with the data that was there before.
+A valid connectionToken and localPlayerToken can be used to save a binary blob of data.
+The append operation appends or composes new data with the data that was there before.
 
 Client Side:
 
@@ -269,7 +269,7 @@ binary
 ~~~
 
 json
-~~~ json
+~~~
 { "status" : (0|1) }
 ~~~
 
@@ -305,7 +305,7 @@ GET /playerData?connection=$connectionToken&localPlayer=$localPlayerToken HTTP/1
 
    json
 ~~~ json
-{ "data" : Data }
+{ "data" : "$uuencodedData" }
 ~~~
 
    plist
@@ -316,7 +316,7 @@ GET /playerData?connection=$connectionToken&localPlayer=$localPlayerToken HTTP/1
 </dict>
 ~~~
 
-The returned data will be empty if there was no data to retrieve. The potential for an error in the connection may be needed too to have a status.
+The returned data will be empty if there was no data to retrieve. Further error checking is required due to the possibilty of connection problems.
 
 Delete Data for the Local Player
 ================================
@@ -341,7 +341,7 @@ binary
 ~~~
 
 json
-~~~ json
+~~~
 { "status" : (0|1) }
 ~~~
 
@@ -356,7 +356,7 @@ plist
 Starting a Session
 ==================
 
-A session is a server state instance than can be shared among players. This is used for saving data in a shared game. As this is possibly shared among players the easiest way to manage atomicity is to treat it like a key value store. There exists a binary blob for each key. There is no merging of data, and last in wins if two connections write to the same key.
+A session is a server state instance than can be shared among players. This is used for saving data in a shared game. As this is possibly shared among players the easiest way to manage atomicity is to treat it like a key value store. There is a binary blob for each key. There is no merging of data, and last in wins if two connections write to the same key.
 
 Client Side:
 
@@ -376,9 +376,9 @@ connection=$connection&localPlayer=$localPlayer&displayName=$displayName
    json
 ~~~ json
 { 
-  "localSessionToken" : UUID,
-  "displayName" : String,
-  "shareCode" : String
+  "localSessionToken" : "$session",
+  "displayName" : "$name",
+  "shareCode" : "$code"
 }
 ~~~
    
@@ -561,9 +561,3 @@ CONNECT /sessionPlayers?connection=$connectionToken&session=$sessionToken&player
 
 This connection may be truly peer-to-peer but if reachability is an issue it may be tunneled through a STUN or TURN server. An implementation detail the client does not need to worry about.
 
-
-<!-- Markdeep: -->
-<style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style>
-<script src="markdeep.min.js"></script>
-<script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script>
-<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
