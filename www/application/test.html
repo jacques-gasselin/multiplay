@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Server Test</title>
+</head>
+<body>
+    <div>
+        <p>Connect JSON</p>
+        <form method="get" action="/connect.json" target="connect-json-response-frame">
+            <label for="connect-game">game</label>
+            <input type="text" id="connect-game" name="game" value="00000000-0000-0000-0000-000000000000"/>
+            <input type="submit"/>
+        </form>
+        <p>Response</p>
+        <iframe width="600" name="connect-json-response-frame">
+        </iframe>
+    </div>
+    <hr />
+    <div>
+        <p>Login JSON</p>
+        <form method="get" action="/login.json" target="login-json-response-frame">
+            <label for="login-connection">connection</label>
+            <input type="text" id="login-connection" name="connection" value="00000000-0000-0000-0000-000000000000"/>
+            <label for="login-localDevice">localDevice</label>
+            <input type="text" id="login-localDevice" name="localDevice" value="00000000-0000-0000-0000-000000000000"/>
+            <input type="submit"/>
+        </form>
+        <p>Response</p>
+        <iframe width="600" name="login-json-response-frame">
+        </iframe>
+    </div>
+    <hr />
+    <div>
+        <p>Player data JSON - Legacy</p>
+        <form target="player-data-legacy-json-response-frame">
+            <label for="player-data-legacy-connection">connection</label>
+            <input type="text" id="player-data-legacy-connection" name="connection" value="00000000-0000-0000-0000-000000000000"/>
+            <label for="player-data-legacy-localPlayer">localPlayer</label>
+            <input type="text" id="player-data-legacy-localPlayer" name="localPlayer" value="00000000-0000-0000-0000-000000000000"/>
+            <label for="write-player-data-legacy-data">data</label>
+            <input type="text" id="write-player-data-legacy-data" name="data"/>
+            <input type="submit" formaction="/readPlayerData.json" formmethod="get" value="GET Read"/>
+            <input type="submit" formaction="/writePlayerData.json" formmethod="get" value="GET Write"/>
+        </form>
+        <p>Response</p>
+        <iframe width="600" name="player-data-legacy-json-response-frame">
+        </iframe>
+    </div>
+    <hr />
+    <div>
+        <p>Player name - Legacy</p>
+        <form target="player-name-legacy-json-response-frame">
+            <label for="player-name-legacy-connection">connection</label>
+            <input type="text" id="player-name-legacy-connection" name="connection" value="00000000-0000-0000-0000-000000000000"/>
+            <label for="player-data-legacy-localPlayer">localPlayer</label>
+            <input type="text" id="player-name-legacy-localPlayer" name="localPlayer" value="00000000-0000-0000-0000-000000000000"/>
+            <label for="write-player-name-legacy-name">displayName</label>
+            <input type="text" id="write-player-name-legacy-name" name="displayName"/>
+            <input type="submit" formaction="/readPlayerDisplayName.json" formmethod="get" value="GET Read"/>
+            <input type="submit" formaction="/writePlayerDisplayName.json" formmethod="get" value="GET Write"/>
+        </form>
+        <p>Response</p>
+        <iframe width="600" name="player-name-legacy-json-response-frame">
+        </iframe>
+    </div>
+
+</body>
+</html>

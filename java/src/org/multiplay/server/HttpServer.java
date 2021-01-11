@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 
-public abstract class HttpServer {
+public class HttpServer {
     private final int port;
     private final ExecutorService executor;
 
@@ -42,7 +42,9 @@ public abstract class HttpServer {
         return request;
     }
 
-    protected abstract HttpResponse handleRequest(HttpRequest request);
+    protected HttpResponse handleRequest(HttpRequest request) {
+        return null;
+    }
 
     private final void writeSocketResponse(Socket socket, HttpResponse response) {
         try (OutputStream stream = socket.getOutputStream()) {

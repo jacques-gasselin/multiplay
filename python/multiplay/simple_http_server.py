@@ -83,7 +83,7 @@ class ServerInstance(object):
         success = self.__db.writePlayerData(connection, localPlayer, data)
         return "1".encode() if success else "0".encode()
 
-    def readplayerdata(self, handler, connection, localPlayer):
+    def readplayerdata(self, handler, connection, localPlayer, data = None):
         print("READ PLAYER DATA FOR player %s ON connection %s " % (localPlayer, connection))
         data = self.__db.readPlayerData(connection, localPlayer)
         return data
@@ -93,7 +93,7 @@ class ServerInstance(object):
         success = self.__db.setPlayerDisplayName(connection, localPlayer, displayName)
         return { "status" : 1 if success else 0 }
 
-    def readplayerdisplayname(self, handler, connection, localPlayer):
+    def readplayerdisplayname(self, handler, connection, localPlayer, displayName = None):
         print("READ displayName FOR player %s ON connection %s " % (localPlayer, connection))
         displayName = self.__db.getPlayerDisplayName(connection, localPlayer)
         return { "displayName" : str(displayName) }
@@ -219,6 +219,17 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
     def _GET_json(self, response):
+        if isinstance(response, bytes):
+            try:
+                rstr = response.decode().strip()
+                response = json.loads(rstr)
+            except json.decoder.JSONDecodeError as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(str(e).encode())
+                self.wfile.write('\n'.encode())
+                self.wfile.write(response)
+                return
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         content = ("%s\n" % json.dumps(response)).encode()
@@ -343,6 +354,7 @@ def run(port, useSSL = False):
                 print("serving at https://", httpd.server_address)
             else:
                 print("serving at http://localhost:%i" % port)
+                print("API test at http://localhost:%i/application/test.html" % port)
                 print("chat client at http://localhost:%i/application/chat.html" % port)
                 print("tictactoe at http://localhost:%i/application/tictactoe.html" % port)
             __httpd = httpd
