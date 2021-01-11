@@ -9,8 +9,8 @@ func fetch(url:URL?) -> JSON? {
     var timedOut = true
     URLSession.shared.dataTask(with: url) { data, res, err in
         if let data = data {
+            print("Read ", data.count, " bytes: ", String(data:data, encoding: .utf8) ?? "???None")
             json = try? JSON(data: data)
-            print("Read ", data.count, " bytes\n")
         }
         else {
             print("Failed to read url: ", url.absoluteString)
@@ -115,9 +115,13 @@ class SessionBase : Hashable {
         get {
             guard let connection = connection else { return [] }
             guard let baseUrl = connection.baseUrl else { return [] }
-            guard let jsonx : JSON = fetchDataAsJson(url: URL(string: baseUrl)) else { return [] }
-            print("Read json ", jsonx.count)
+            guard let json : JSON = fetchDataAsJson(url: URL(string: baseUrl)) else { return [] }
+            let players = json["players"]
             var result: [String] = []
+            for player in players {
+                guard let name = player.1.string else { continue }
+                result.append(name)
+            }
             return result
         }
     }

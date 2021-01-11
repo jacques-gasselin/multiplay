@@ -57,36 +57,42 @@ struct MessageView : View {
     }
 }
 
+struct ChatState {
+    var connection: Connection?
+    var channels: [String] = []
+    var channelSessions: [Session] = []
+    var channelCodes: [String] = []
+    var currentSession: Session?
+    var friends: [String] = [ "Foo", "Baz" ]
+    var messages: [Message] = []
+}
+
 struct ChannelView : View {
     var channel: String
     var shareCode: String
-    var friends: [String]
+    @State var chat: ChatState
     
     var body: some View {
-        HStack {
-            Text(channel)
-                .padding(10)
+        HStack(alignment: .top, spacing: 2, content: {
+            Button(channel, action: activateChannel(name: channel))
+                .padding(1)
                 .foregroundColor(Color.white)
                 .background(Color.blue)
                 .cornerRadius(10)
-            Text(shareCode)
-                .padding(10)
+            Button(shareCode, action: copyShareCode(code: shareCode))
+                .padding(1)
                 .foregroundColor(Color.white)
                 .background(Color.blue)
                 .cornerRadius(10)
-            Button("-> Clipboard", action: copyShareCode(code: shareCode))
-        }
-        HStack {
-            Text("Friends: ")
-                .padding(10)
-                .foregroundColor(Color.white)
-                .background(Color.blue)
-            
-            ForEach(friends, id: \.self) { friend in
-                HStack {
-                    Text(friend)
-                }
-            }
+        })
+    }
+        
+    func activateChannel(name: String) ->() ->() {
+        return {
+            guard let index = chat.channels.firstIndex(of: name) else { return }
+            chat.currentSession = chat.channelSessions[index]
+            guard let session = chat.currentSession else { return }
+            chat.friends = session.players
         }
     }
     
@@ -98,6 +104,8 @@ struct ChannelView : View {
     }
 }
 
+
+
 struct ChatView: View {
     @State var ui_baseUrl: String = "http://multiplay.ludo.digital:12345"
     @State var ui_playerName: String = "Guest"
@@ -106,17 +114,8 @@ struct ChatView: View {
     @State var ui_newChannel: String = "Chat_1"
     @State var ui_channelCode: String = "GSFPJBZS"
 
-    @State var connection: Connection?
-    @State var channels: [String] = []
-    @State var channelSessions: [Session] = []
-    @State var channelCodes: [String] = []
+    @State var state: ChatState = ChatState()
     
-    @State var currentSession: Session?
-    
-    @State var friends: [String] = [ "Foo", "Baz" ]
-
-    @State var messages: [Message] = []
-
     init() {
     }
     
@@ -126,7 +125,7 @@ struct ChatView: View {
     }
     
     var body: some View {
-        VStack {
+        VStack(alignment: .leading) {
             HStack {
                 Text("Multiplay Server: ")
                     .padding()
@@ -170,60 +169,78 @@ struct ChatView: View {
                 
                 Button("-> Clipboard", action: copyFriendCode(code: self.ui_friendCode))
             }
-            Text("Channels:")
-            List {
-                ForEach(channelSessions, id: \.self) { channel in
-                    HStack {
-                        ChannelView(channel: channel.displayName!, shareCode: channel.shareCode!, friends: self.friends)
-                        Button("View", action: activateChannel(name: channel.displayName!))
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Friends: ")
+                        .padding(10)
+                        .foregroundColor(Color.white)
+                        .background(Color.blue)
+                    
+                    ForEach(state.friends, id: \.self) { friend in
+                        HStack {
+                            Text(friend)
+                        }
+                    }
+                    Text("Channels:")
+                        .padding(10)
+                        .foregroundColor(Color.white)
+                        .background(Color.blue)
+                    List {
+                        ForEach(state.channelSessions, id: \.self) { channel in
+                            HStack {
+                                ChannelView(channel: channel.displayName!, shareCode: channel.shareCode!, chat: state)
+                            }
+                        }
                     }
                 }
-            }
-            HStack {
-                Text("Add Channel: ")
-                    .padding()
-                    .frame(minHeight: CGFloat(30))
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Create Channel: ")
+                            .padding()
+                            .frame(minHeight: CGFloat(30))
 
-                TextField("Channel:", text: $ui_newChannel, onEditingChanged:{ (changed) in
-                    print("$channelName edited - \(changed)")
-                }) {
-                    print("$channelName committed \(self.ui_newChannel)")
-                    addChannel(name:self.ui_newChannel)
-                }
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(minHeight: CGFloat(30))
-            }
-            HStack {
-                Text("Join Channel: ")
-                    .padding()
-                    .frame(minHeight: CGFloat(30))
+                        TextField("Channel:", text: $ui_newChannel, onEditingChanged:{ (changed) in
+                            print("$channelName edited - \(changed)")
+                        }) {
+                            print("$channelName committed \(self.ui_newChannel)")
+                            addChannel(name:self.ui_newChannel)
+                        }
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(minHeight: CGFloat(30))
+                    }
+                    HStack {
+                        Text("Join Channel: ")
+                            .padding()
+                            .frame(minHeight: CGFloat(30))
 
-                TextField("Channel:", text: $ui_channelCode, onEditingChanged:{ (changed) in
-                    print("$channelCode edited - \(changed)")
-                }) {
-                    print("$channelCode committed \(self.ui_channelCode)")
-                    joinChannel(name:self.ui_channelCode)
+                        TextField("Channel:", text: $ui_channelCode, onEditingChanged:{ (changed) in
+                            print("$channelCode edited - \(changed)")
+                        }) {
+                            print("$channelCode committed \(self.ui_channelCode)")
+                            joinChannel(name:self.ui_channelCode)
+                        }
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(minHeight: CGFloat(30))
+                    }
+                    Text("Messages:")
+                    List {
+                        ForEach(state.messages, id: \.self) { msg in
+                           MessageView(currentMessage: msg)
+                         }
+                    }
+                    HStack {
+                        TextField("Message", text: $ui_currentMessage, onEditingChanged:{ (changed) in
+                            print("$currentMessage edited - \(changed)")
+                        }) {
+                            sendMessage()
+                        }
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(minHeight: CGFloat(30))
+                        Button(action: sendMessage) {
+                            Text("Send")
+                         }
+                    }
                 }
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(minHeight: CGFloat(30))
-            }
-            Text("Messages:")
-            List {
-                ForEach(messages, id: \.self) { msg in
-                   MessageView(currentMessage: msg)
-                 }
-            }
-            HStack {
-                TextField("Message", text: $ui_currentMessage, onEditingChanged:{ (changed) in
-                    print("$currentMessage edited - \(changed)")
-                }) {
-                    sendMessage()
-                }
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(minHeight: CGFloat(30))
-                Button(action: sendMessage) {
-                    Text("Send")
-                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -241,7 +258,7 @@ struct ChatView: View {
         let c : Connection? = Connection(gameUUID:gameUUID, baseUrl:ui_baseUrl)
         if c == nil { return }
 
-        self.connection = c
+        state.connection = c
         let _ = c!.connect()
         if let localPlayer = c!.login() {
             ui_playerName = localPlayer.displayName == nil ? "Guest" : localPlayer.displayName!
@@ -250,16 +267,16 @@ struct ChatView: View {
     }
     
     func addChannel(name: String) {
-        let index = channels.firstIndex(of: name)
+        let index = state.channels.firstIndex(of: name)
         if index == nil {
-            guard let connection = connection else { return }
+            guard let connection = state.connection else { return }
             guard let player = connection.localPlayer else { return }
             guard let session = player.createSession(name: name) else { return }
-            channelSessions.append(session)
-            channels.append(name)
-            channelCodes.append(session.shareCode!)
+            state.channelSessions.append(session)
+            state.channels.append(name)
+            state.channelCodes.append(session.shareCode!)
             
-            friends = session.players
+            state.friends = session.players
         }
     }
         
@@ -270,36 +287,32 @@ struct ChatView: View {
         }
     }
 
-    func activateChannel(name: String) ->() ->() {
-        return {
-            guard let index = channels.firstIndex(of: name) else { return }
-            currentSession = channelSessions[index]
-        }
-    }
 
     func joinChannel(name: String) {
-        let index = channelCodes.firstIndex(of: name)
+        let index = state.channelCodes.firstIndex(of: name)
         if index != nil { return }
-        guard let connection = connection else { return }
+        guard let connection = state.connection else { return }
         guard let player = connection.localPlayer else { return }
+        player.authenticate()
         guard let session = player.joinSessionByShareCode(shareCode: name) else { return }
-        channels.append(session.displayName!)
-        channelSessions.append(session)
-        channelCodes.append(name)
-        currentSession = session
-        friends = session.players
+        
+        state.channels.append(session.displayName!)
+        state.channelSessions.append(session)
+        state.channelCodes.append(name)
+        state.currentSession = session
+        state.friends = session.players
     }
     
     func refreshMessages() {
-        guard let session = currentSession else { return }
-        guard let connection = connection else { return }
+        guard let session = state.currentSession else { return }
+        guard let connection = state.connection else { return }
         guard let baseUrl = connection.baseUrl else { return }
         guard let data = session.fetchDataAsJson(url: URL(string: baseUrl)) else { return }
         let currentMessages = data["messages"]
-        messages = []
+        state.messages = []
         let user = User(name:"Foo", avatar: "F", isCurrentUser: true)
         for message in currentMessages {
-            messages.append(Message(content:message.1.string ?? "???", user:user))
+            state.messages.append(Message(content:message.1.string ?? "???", user:user))
         }
     }
 
